@@ -208,7 +208,7 @@ const parseCSVLine = (line: string): string[] => {
 // Load CSV from public folder
 export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
   try {
-    const response = await fetch('/Test.CSV');
+    const response = await fetch('/Test.csv');
     if (!response.ok) {
       throw new Error(`Failed to load CSV: ${response.statusText}`);
     }
