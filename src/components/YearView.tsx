@@ -263,7 +263,7 @@ const YearView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highligh
                 <YearText>{yearGroup.year}</YearText>
               </ColumnHeader>
               
-              <DocumentList>
+              <DocumentList className="scroll-fade">
                 {yearGroup.monthGroups.every(monthGroup => monthGroup.docs.length === 0) ? (
                   <EmptyState>No documents</EmptyState>
                 ) : (

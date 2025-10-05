@@ -237,7 +237,7 @@ const DayView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlight
                   <DayName>{dayGroup.dayName}</DayName> <DayNumber>{dayGroup.day}</DayNumber>
                 </ColumnHeader>
               
-              <DocumentList>
+              <DocumentList className="scroll-fade">
                 {dayGroup.docs.length === 0 ? (
                   <EmptyState>No documents</EmptyState>
                 ) : (

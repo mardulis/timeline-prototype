@@ -235,7 +235,7 @@ const MonthView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlig
                   <MonthText>{monthGroup.monthName}</MonthText> <YearText>{currentYear}</YearText>
                 </ColumnHeader>
               
-              <DocumentList>
+              <DocumentList className="scroll-fade">
                 {monthGroup.docs.length === 0 ? (
                   <EmptyState>No documents</EmptyState>
                 ) : (

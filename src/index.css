@@ -11,3 +11,88 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* === Scroll Fade: Top/Bottom gradient hints for overflow columns === */
+
+/* Tune these per theme */
+.scroll-fade {
+  --fade-bg: #ffffff;      /* background behind the content */
+  --fade-size: 36px;       /* gradient height */
+  --fade-strength: 1;      /* 0..1 opacity multiplier */
+  position: relative;
+  overflow: auto;          /* must scroll */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Top & bottom overlays */
+.scroll-fade::before,
+.scroll-fade::after {
+  content: "";
+  position: sticky;        /* stays pinned to top/bottom while scrolling */
+  left: 0; right: 0;
+  height: var(--fade-size);
+  pointer-events: none;
+  z-index: 1;
+  display: none;           /* toggled on via classes */
+}
+
+/* Top fade */
+.scroll-fade::before {
+  top: 0;
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgba(255,255,255,calc(0.95 * var(--fade-strength))) 0%,
+      rgba(255,255,255,calc(0.75 * var(--fade-strength))) 35%,
+      rgba(255,255,255,0) 100%
+    );
+  /* Match bg exactly to avoid a seam on patterned parents */
+  background-color: var(--fade-bg);
+}
+
+/* Bottom fade */
+.scroll-fade::after {
+  bottom: 0;
+  background-image:
+    linear-gradient(
+      to top,
+      rgba(255,255,255,calc(0.95 * var(--fade-strength))) 0%,
+      rgba(255,255,255,calc(0.75 * var(--fade-strength))) 35%,
+      rgba(255,255,255,0) 100%
+    );
+  background-color: var(--fade-bg);
+}
+
+/* Show/hide based on scroll position */
+.scroll-fade.has-overflow:not(.at-top)::before { display: block; }
+.scroll-fade.has-overflow:not(.at-bottom)::after { display: block; }
+
+/* Optional: dark mode support */
+@media (prefers-color-scheme: dark) {
+  .scroll-fade {
+    --fade-bg: #0b0d10;
+  }
+  .scroll-fade::before {
+    background-image:
+      linear-gradient(to bottom,
+        rgba(11,13,16,0.96) 0%,
+        rgba(11,13,16,0.8) 40%,
+        rgba(11,13,16,0) 100%);
+  }
+  .scroll-fade::after {
+    background-image:
+      linear-gradient(to top,
+        rgba(11,13,16,0.96) 0%,
+        rgba(11,13,16,0.8) 40%,
+        rgba(11,13,16,0) 100%);
+  }
+}
+
+/* Respect users who prefer less effects */
+@media (prefers-reduced-transparency: reduce) {
+  .scroll-fade::before,
+  .scroll-fade::after {
+    background-image: none;
+    background-color: transparent;
+  }
+}
