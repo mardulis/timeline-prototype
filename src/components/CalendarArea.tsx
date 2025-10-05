@@ -395,37 +395,6 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scale, isPreviewVisible]); // Dependencies for useCallback
 
-  // Enhanced minimap scrolling with state preservation
-  const scrollToColumnWithSmartScroll = useCallback((targetDate: Date, columnSelector: string) => {
-    if (!calendarRef.current) return;
-    
-    const scrollableContainer = calendarRef.current.querySelector('.scrollable-grid') as HTMLElement;
-    if (!scrollableContainer) return;
-    
-    // Mark that we're doing minimap scrolling
-    scrollStateRef.current.isMinimapScrolling = true;
-    scrollStateRef.current.lastMinimapScrollTime = Date.now();
-    
-    // Get current scroll state
-    const currentScrollLeft = scrollableContainer.scrollLeft;
-    const containerRect = scrollableContainer.getBoundingClientRect();
-    
-    // Find the target column element
-    const targetColumn = scrollableContainer.querySelector(columnSelector) as HTMLElement;
-    if (!targetColumn) {
-      // If target not found, try again after a short delay (for view transitions)
-      setTimeout(() => {
-        const retryTarget = scrollableContainer.querySelector(columnSelector) as HTMLElement;
-        if (retryTarget) {
-          performMinimapScroll(retryTarget, scrollableContainer, containerRect, currentScrollLeft);
-        }
-      }, 100);
-      return;
-    }
-    
-    performMinimapScroll(targetColumn, scrollableContainer, containerRect, currentScrollLeft);
-  }, [isPreviewVisible]);
-
   // Helper function to perform the actual minimap scroll calculation
   const performMinimapScroll = useCallback((targetColumn: HTMLElement, scrollableContainer: HTMLElement, containerRect: DOMRect, currentScrollLeft: number) => {
     const columnRect = targetColumn.getBoundingClientRect();
@@ -473,20 +442,53 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     }, 500);
   }, [isPreviewVisible, debouncedSmoothScrollTo]);
 
+  // Enhanced minimap scrolling with state preservation
+  const scrollToColumnWithSmartScroll = useCallback((targetDate: Date, columnSelector: string) => {
+    if (!calendarRef.current) return;
+    
+    const scrollableContainer = calendarRef.current.querySelector('.scrollable-grid') as HTMLElement;
+    if (!scrollableContainer) return;
+    
+    // Mark that we're doing minimap scrolling
+    scrollStateRef.current.isMinimapScrolling = true;
+    scrollStateRef.current.lastMinimapScrollTime = Date.now();
+    
+    // Get current scroll state
+    const currentScrollLeft = scrollableContainer.scrollLeft;
+    const containerRect = scrollableContainer.getBoundingClientRect();
+    
+    // Find the target column element
+    const targetColumn = scrollableContainer.querySelector(columnSelector) as HTMLElement;
+    if (!targetColumn) {
+      // If target not found, try again after a short delay (for view transitions)
+      setTimeout(() => {
+        const retryTarget = scrollableContainer.querySelector(columnSelector) as HTMLElement;
+        if (retryTarget) {
+          performMinimapScroll(retryTarget, scrollableContainer, containerRect, currentScrollLeft);
+        }
+      }, 100);
+      return;
+    }
+    
+    performMinimapScroll(targetColumn, scrollableContainer, containerRect, currentScrollLeft);
+  }, [isPreviewVisible, performMinimapScroll]);
+
   // Cleanup animations on unmount
   useEffect(() => {
     return () => {
       // Cancel all pending animations
-      animationRefs.current.forEach((animationId) => {
+      const currentAnimationRefs = animationRefs.current;
+      currentAnimationRefs.forEach((animationId) => {
         cancelAnimationFrame(animationId);
       });
-      animationRefs.current.clear();
+      currentAnimationRefs.clear();
       
       // Clear all pending timeouts
-      scrollDebounceRef.current.forEach((timeoutId) => {
+      const currentScrollDebounceRef = scrollDebounceRef.current;
+      currentScrollDebounceRef.forEach((timeoutId) => {
         clearTimeout(timeoutId);
       });
-      scrollDebounceRef.current.clear();
+      currentScrollDebounceRef.clear();
     };
   }, []);
 
