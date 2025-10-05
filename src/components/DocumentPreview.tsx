@@ -289,21 +289,27 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
     if (!document) return pdfFiles[0]; // Fallback if no document
     
     const title = document.title.toLowerCase();
+    console.log('Document title:', document.title, 'Looking for PDF match...');
     
     // Try to match document title with PDF filename
     if (title.includes('aida') || title.includes('maldonado')) {
+      console.log('Matched Aida PDF');
       return 'Aida Maldonado Vega - 2024-12-04 (3).pdf';
     }
     if (title.includes('ocf') || title.includes('18')) {
+      console.log('Matched OCF PDF');
       return 'OCF18-1pg (2).pdf';
     }
     if (title.includes('test') || title.includes('wc') || title.includes('wf')) {
+      console.log('Matched Test PDF');
       return 'test WC WF - 2025-09-23 - Index with Summary (10).pdf';
     }
     
     // Fallback to random selection
     const randomIndex = Math.floor(Math.random() * pdfFiles.length);
-    return pdfFiles[randomIndex];
+    const selectedPDF = pdfFiles[randomIndex];
+    console.log('Using random PDF:', selectedPDF);
+    return selectedPDF;
   };
 
   const toggleAccordion = (key: string) => {
@@ -489,7 +495,11 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
           </AccordionCard>
         </PreviewContent>
       ) : (
-        <PDFViewer pdfPath={`/${getPDFForDocument()}`} />
+        <PDFViewer pdfPath={`/${(() => {
+          const pdfFile = getPDFForDocument();
+          console.log('Passing PDF path to viewer:', `/${pdfFile}`);
+          return pdfFile;
+        })()}`} />
       )}
     </PreviewContainer>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 const PDFViewerContainer = styled.div`
@@ -8,6 +8,12 @@ const PDFViewerContainer = styled.div`
   flex-direction: column;
 `;
 
+const PDFFrame = styled.iframe`
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+`;
 
 const ErrorContainer = styled.div`
   display: flex;
@@ -75,40 +81,38 @@ const LoadingSpinner = styled.div`
   }
 `;
 
-const PDFObject = styled.object`
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: white;
-`;
-
-const PDFEmbed = styled.embed`
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: white;
-`;
-
 const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [useObject, setUseObject] = useState(true); // Try object first, then embed
+
+  useEffect(() => {
+    // Reset states when pdfPath changes
+    setIsLoading(true);
+    setHasError(false);
+  }, [pdfPath]);
 
   const handleLoad = () => {
+    console.log('PDF loaded successfully:', pdfPath);
     setIsLoading(false);
   };
 
   const handleError = () => {
-    if (useObject) {
-      // Try embed as fallback
-      setUseObject(false);
-      setIsLoading(true);
-    } else {
-      // Both failed
-      setIsLoading(false);
-      setHasError(true);
-    }
+    console.log('PDF failed to load:', pdfPath);
+    setIsLoading(false);
+    setHasError(true);
   };
+
+  // Add a timeout to handle cases where load/error events don't fire
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false);
+        setHasError(true);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
 
   if (hasError) {
     return (
@@ -135,33 +139,13 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
           <div>Loading PDF...</div>
         </LoadingContainer>
       )}
-      {useObject ? (
-        <PDFObject
-          data={`${pdfPath}#toolbar=1&navpanes=1&scrollbar=1`}
-          type="application/pdf"
-          onLoad={handleLoad}
-          onError={handleError}
-          style={{ display: isLoading ? 'none' : 'block' }}
-        >
-          <ErrorContainer>
-            <ErrorTitle>PDF Preview Not Supported</ErrorTitle>
-            <ErrorMessage>
-              Your browser doesn't support PDF preview with object tag.
-            </ErrorMessage>
-            <DownloadButton href={pdfPath} download target="_blank">
-              📄 Download PDF
-            </DownloadButton>
-          </ErrorContainer>
-        </PDFObject>
-      ) : (
-        <PDFEmbed
-          src={`${pdfPath}#toolbar=1&navpanes=1&scrollbar=1`}
-          type="application/pdf"
-          onLoad={handleLoad}
-          onError={handleError}
-          style={{ display: isLoading ? 'none' : 'block' }}
-        />
-      )}
+      <PDFFrame
+        src={`${pdfPath}#toolbar=1&navpanes=1&scrollbar=1`}
+        title="PDF Document"
+        onLoad={handleLoad}
+        onError={handleError}
+        style={{ display: isLoading ? 'none' : 'block' }}
+      />
     </PDFViewerContainer>
   );
 };
