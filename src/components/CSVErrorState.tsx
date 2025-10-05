@@ -13,14 +13,12 @@ const ErrorContainer = styled.div`
 `;
 
 const ErrorIcon = styled.div`
-  width: 64px;
-  height: 64px;
+  width: 120px;
+  height: 120px;
   margin-bottom: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fef2f2;
-  border-radius: 50%;
 `;
 
 const ErrorTitle = styled.h2`
@@ -84,26 +82,24 @@ const RefreshIcon = styled.div`
 interface CSVErrorStateProps {
   error: string;
   onRefresh: () => void;
+  onLoadDefault: () => void;
 }
 
-const CSVErrorState: React.FC<CSVErrorStateProps> = ({ error, onRefresh }) => {
+const CSVErrorState: React.FC<CSVErrorStateProps> = ({ error, onRefresh, onLoadDefault }) => {
   return (
     <ErrorContainer>
       <ErrorIcon>
-        {/* Failed load icon - using a simple warning icon */}
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <img src="/svg/Failed load.svg" alt="Failed to load" width="120" height="120" />
       </ErrorIcon>
       
-      <ErrorTitle>Cases failed to load</ErrorTitle>
+      <ErrorTitle>Wrong CSV format</ErrorTitle>
       
       <ErrorMessage>
-        Try refreshing the page. Contact us if the issue persists.
+        Expected columns: Title, Doc Type, Author, Facility, Date, Pages, Summary
       </ErrorMessage>
       
-      <ContactSupportLink href="#" onClick={(e) => e.preventDefault()}>
-        Contact support
+      <ContactSupportLink href="#" onClick={(e) => { e.preventDefault(); onLoadDefault(); }}>
+        Load default CSV
       </ContactSupportLink>
       
       <RefreshButton onClick={onRefresh}>
@@ -113,7 +109,7 @@ const CSVErrorState: React.FC<CSVErrorStateProps> = ({ error, onRefresh }) => {
             <path d="M1 4V10H7M23 20V14H17M20.49 9A9 9 0 0 0 5.64 5.64L1 10M22.99 14A9 9 0 0 1 18.36 18.36L23 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </RefreshIcon>
-        Refresh
+        Load other CSV
       </RefreshButton>
     </ErrorContainer>
   );

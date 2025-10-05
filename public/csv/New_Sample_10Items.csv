@@ -1,0 +1,11 @@
+Title,Category,Region,Status,Amount,Duration,Comments,Reference,Flag,Reviewer
+Case Report 1,Follow-up,East,Closed,44957.15,4 months,Review completed on iteration 2,REF-1000,Yes,Taylor M.
+Case Report 2,General,West,In Review,6807.78,1 months,Review completed on iteration 5,REF-1001,Yes,Sam T.
+Case Report 3,Urgent,West,Open,1616.61,2 months,Review completed on iteration 3,REF-1002,Yes,Riley K.
+Case Report 4,Urgent,East,In Review,26283.7,10 months,Review completed on iteration 3,REF-1003,No,Taylor M.
+Case Report 5,Urgent,West,In Review,11891.69,10 months,Review completed on iteration 3,REF-1004,Yes,Jordan P.
+Case Report 6,Pending,South,Closed,16580.22,10 months,Review completed on iteration 1,REF-1005,No,Alex J.
+Case Report 7,Pending,South,Closed,33021.96,2 months,Review completed on iteration 1,REF-1006,No,Sam T.
+Case Report 8,Closed,West,Submitted,27641.15,2 months,Review completed on iteration 3,REF-1007,No,Jordan P.
+Case Report 9,Follow-up,South,Open,8498.58,12 months,Review completed on iteration 5,REF-1008,No,Riley K.
+Case Report 10,Follow-up,Central,Closed,33273.16,7 months,Review completed on iteration 5,REF-1009,Yes,Taylor M.

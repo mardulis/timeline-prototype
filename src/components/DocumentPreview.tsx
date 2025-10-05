@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { DocumentPreviewProps } from '../types/Timeline';
 import PDFViewer from './PDFViewer';
@@ -16,6 +16,17 @@ const PreviewHeader = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+`;
+
+const PreviewContentArea = styled.div`
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 `;
 
 const HeaderRow = styled.div`
@@ -90,13 +101,14 @@ const PreviewTab = styled.button<{ isActive: boolean }>`
 const CloseButton = styled.button`
   width: 32px;
   height: 32px;
-  border: none;
-  background: transparent;
+  padding: 8px;
+  border: 1px solid #E5E7EB;
+  background: #FFF;
   color: #6b7280;
   font-size: 18px;
   font-weight: bold;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,8 +254,10 @@ const AccordionIcon = styled.div`
 const AccordionToggle = styled.div<{ isOpen: boolean }>`
   font-size: 12px;
   color: #6b7280;
-  transition: transform 0.2s ease;
-  transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const AccordionContent = styled.div<{ isOpen: boolean }>`
@@ -277,12 +291,36 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
   });
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
+  // Health check PDF accessibility when document changes
+  useEffect(() => {
+    if (document && activeTab === 'pdf') {
+      const pdfFilename = getPDFForDocument();
+      assertPdfReachable(pdfFilename);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document, activeTab]);
+
   // Available PDF files in the public folder
   const pdfFiles = [
     'Aida Maldonado Vega - 2024-12-04 - 3.pdf',
     'OCF18-1pg - 2.pdf',
     'test WC WF - 2025-09-23 - Index with Summary - 10.pdf'
   ];
+
+  // Runtime health check for PDF accessibility (optional debugging)
+  const assertPdfReachable = async (filename: string) => {
+    const url = `/pdf/${filename}`;
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      if (!res.ok || !(res.headers.get('content-type') || '').includes('pdf')) {
+        console.warn('[PDF] Unexpected response for', url, res.status, res.headers.get('content-type'));
+      } else {
+        console.log('[PDF] PDF is reachable:', url);
+      }
+    } catch (e) {
+      console.error('[PDF] HEAD failed', url, e);
+    }
+  };
 
   // Function to get PDF file based on document title or type
   const getPDFForDocument = () => {
@@ -313,12 +351,19 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
       return 'test WC WF - 2025-09-23 - Index with Summary - 10.pdf';
     }
     
-    // Fallback to random selection
-    const randomIndex = Math.floor(Math.random() * pdfFiles.length);
-    const selectedPDF = pdfFiles[randomIndex];
+    // Deterministic fallback based on document ID to ensure consistency across timeframes
+    const documentId = document.id || document.title;
+    const hash = documentId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    const pdfIndex = Math.abs(hash) % pdfFiles.length;
+    const selectedPDF = pdfFiles[pdfIndex];
+    
     if (process.env.NODE_ENV === 'development') {
-      console.log('Using random PDF:', selectedPDF);
+      console.log('Using deterministic PDF based on ID:', selectedPDF, 'for document:', documentId);
     }
+    
     return selectedPDF;
   };
 
@@ -345,11 +390,13 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
   if (!document) {
     return (
       <PreviewContainer>
-        <PreviewContent>
-          <div style={{ textAlign: 'center', color: '#6b7280', marginTop: '50px' }}>
-            Select a document to view details
-          </div>
-        </PreviewContent>
+        <PreviewContentArea>
+          <PreviewContent>
+            <div style={{ textAlign: 'center', color: '#6b7280', marginTop: '50px' }}>
+              Select a document to view details
+            </div>
+          </PreviewContent>
+        </PreviewContentArea>
       </PreviewContainer>
     );
   }
@@ -360,12 +407,12 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
         <HeaderRow>
           <DocumentTitle>
             <DocumentIcon>
-              <img src="/Document.svg" alt="Document" width="20" height="20" />
+              <img src="/svg/Document.svg" alt="Document" width="20" height="20" />
             </DocumentIcon>
             {document.title}
           </DocumentTitle>
           <CloseButton onClick={onClose}>
-            <img src="/close.svg" alt="Close" width="16" height="16" />
+            <img src="/svg/Close.svg" alt="Close" width="16" height="16" />
           </CloseButton>
         </HeaderRow>
         
@@ -387,8 +434,9 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
         </TabRow>
       </PreviewHeader>
 
-      {activeTab === 'details' ? (
-        <PreviewContent>
+      <PreviewContentArea>
+        {activeTab === 'details' ? (
+          <PreviewContent>
           <MetadataGrid>
             <MetadataItem>
               <MetadataLabel>Date</MetadataLabel>
@@ -439,11 +487,18 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
             >
               <AccordionTitle>
                 <AccordionIcon>
-                  <img src="/Medications.svg" alt="Medications" width="16" height="16" />
+                  <img src="/svg/Medications.svg" alt="Medications" width="16" height="16" />
                 </AccordionIcon>
                 Medication ({document.medications.length})
               </AccordionTitle>
-              <AccordionToggle isOpen={openAccordions.medications}>▼</AccordionToggle>
+              <AccordionToggle isOpen={openAccordions.medications}>
+                <img 
+                  src={openAccordions.medications ? "/svg/chevronUp.svg" : "/svg/chevronDown.svg"} 
+                  alt={openAccordions.medications ? "Collapse" : "Expand"} 
+                  width="16" 
+                  height="16" 
+                />
+              </AccordionToggle>
             </AccordionHeader>
             <AccordionContent isOpen={openAccordions.medications}>
               <AccordionInner>
@@ -463,11 +518,18 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
             >
               <AccordionTitle>
                 <AccordionIcon>
-                  <img src="/Diagnosis.svg" alt="Diagnosis" width="16" height="16" />
+                  <img src="/svg/Diagnosis.svg" alt="Diagnosis" width="16" height="16" />
                 </AccordionIcon>
                 Diagnosis ({document.diagnoses.length})
               </AccordionTitle>
-              <AccordionToggle isOpen={openAccordions.diagnoses}>▼</AccordionToggle>
+              <AccordionToggle isOpen={openAccordions.diagnoses}>
+                <img 
+                  src={openAccordions.diagnoses ? "/svg/chevronUp.svg" : "/svg/chevronDown.svg"} 
+                  alt={openAccordions.diagnoses ? "Collapse" : "Expand"} 
+                  width="16" 
+                  height="16" 
+                />
+              </AccordionToggle>
             </AccordionHeader>
             <AccordionContent isOpen={openAccordions.diagnoses}>
               <AccordionInner>
@@ -487,11 +549,18 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
             >
               <AccordionTitle>
                 <AccordionIcon>
-                  <img src="/Labs.svg" alt="Labs" width="16" height="16" />
+                  <img src="/svg/Labs.svg" alt="Labs" width="16" height="16" />
                 </AccordionIcon>
                 Labs ({document.labs.length})
               </AccordionTitle>
-              <AccordionToggle isOpen={openAccordions.labs}>▼</AccordionToggle>
+              <AccordionToggle isOpen={openAccordions.labs}>
+                <img 
+                  src={openAccordions.labs ? "/svg/chevronUp.svg" : "/svg/chevronDown.svg"} 
+                  alt={openAccordions.labs ? "Collapse" : "Expand"} 
+                  width="16" 
+                  height="16" 
+                />
+              </AccordionToggle>
             </AccordionHeader>
             <AccordionContent isOpen={openAccordions.labs}>
               <AccordionInner>
@@ -504,13 +573,10 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
             </AccordionContent>
           </AccordionCard>
         </PreviewContent>
-      ) : (
-        <PDFViewer pdfPath={`/${(() => {
-          const pdfFile = getPDFForDocument();
-          console.log('Passing PDF path to viewer:', `/${pdfFile}`);
-          return pdfFile;
-        })()}`} />
-      )}
+        ) : (
+          <PDFViewer pdfPath={getPDFForDocument()} />
+        )}
+      </PreviewContentArea>
     </PreviewContainer>
   );
 };

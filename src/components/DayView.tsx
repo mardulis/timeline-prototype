@@ -292,7 +292,7 @@ const DayView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlight
                           isHighlighted={highlightedMonth?.year === currentYear && highlightedMonth?.month === currentMonth}
                         >
                           <DocumentIcon isSelected={selectedDocId === doc.id}>
-                            <img src="/Document.svg" alt="Document" width="16" height="16" />
+                            <img src="/svg/Document.svg" alt="Document" width="16" height="16" />
                           </DocumentIcon>
                         
                           <DocumentInfo>

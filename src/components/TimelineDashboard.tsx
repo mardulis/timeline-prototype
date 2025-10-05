@@ -8,7 +8,7 @@ import DocumentPreview from './DocumentPreview';
 import CSVErrorState from './CSVErrorState';
 import CSVLoadingState from './CSVLoadingState';
 import { TimeScale, Mode, Doc, DocumentPreviewData } from '../types/Timeline';
-import { loadCSVDocuments, parseCSV } from '../utils/csvParser';
+import { loadCSVDocuments, loadTestCSVDocuments, parseCSV } from '../utils/csvParser';
 
 const DashboardContainer = styled.div`
   display: flex;
@@ -68,6 +68,7 @@ const DocumentPreviewPanel = styled.div<{ isVisible: boolean }>`
 // Convert Doc to DocumentPreviewData
 const convertDocToPreviewData = (doc: Doc): DocumentPreviewData => {
   return {
+    id: doc.id,
     title: doc.title,
     date: doc.date,
     docType: doc.docType,
@@ -132,6 +133,7 @@ const TimelineDashboard: React.FC = () => {
   const handleLoadCSV = async (file: File) => {
     setIsLoadingCSV(true);
     setCsvError(null);
+    setSelectedDoc(null); // Close document preview panel
     
     try {
       const text = await file.text();
@@ -142,6 +144,9 @@ const TimelineDashboard: React.FC = () => {
       }
       
       setDocs(csvDocs);
+      
+      // Switch to Year timeframe when CSV is loaded
+      setScale('year');
       
       // Update range based on actual data
       const dates = csvDocs.map(doc => new Date(doc.date));
@@ -166,30 +171,54 @@ const TimelineDashboard: React.FC = () => {
 
   const handleRefreshCSV = () => {
     setCsvError(null);
-    // Reload the default CSV data
-    const loadData = async () => {
-      try {
-        const csvDocs = await loadCSVDocuments();
-        setDocs(csvDocs);
-        
-        // Update range based on actual data
-        if (csvDocs.length > 0) {
-          const dates = csvDocs.map(doc => new Date(doc.date));
-          const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-          const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-          setRange({ start: minDate, end: maxDate });
-          
-          // Set current year to the most recent year with data
-          const maxYear = maxDate.getFullYear();
-          setCurrentYear(maxYear);
-        }
-      } catch (error) {
-        console.error('Failed to load CSV data:', error);
-        setCsvError('Failed to load default data');
+    setSelectedDoc(null); // Close document preview panel
+    // Trigger file picker to load a new CSV file
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv';
+    fileInput.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        await handleLoadCSV(file);
       }
     };
+    fileInput.click();
+  };
 
-    loadData();
+  const handleLoadDefaultCSV = async () => {
+    setIsLoadingCSV(true);
+    setCsvError(null);
+    setSelectedDoc(null); // Close document preview panel
+    
+    try {
+      const csvDocs = await loadTestCSVDocuments();
+      
+      if (csvDocs.length === 0) {
+        throw new Error('No valid data found in Test.csv file');
+      }
+      
+      setDocs(csvDocs);
+      
+      // Switch to Year timeframe when CSV is loaded
+      setScale('year');
+      
+      // Update range based on actual data
+      if (csvDocs.length > 0) {
+        const dates = csvDocs.map(doc => new Date(doc.date));
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+        setRange({ start: minDate, end: maxDate });
+        
+        // Set current year to the most recent year with data
+        const maxYear = maxDate.getFullYear();
+        setCurrentYear(maxYear);
+      }
+    } catch (error) {
+      console.error('Error loading Test.csv:', error);
+      setCsvError(error instanceof Error ? error.message : 'Failed to load Test.csv');
+    } finally {
+      setIsLoadingCSV(false);
+    }
   };
 
   const handleScaleChange = (newScale: TimeScale) => {
@@ -311,7 +340,7 @@ const TimelineDashboard: React.FC = () => {
             {isLoadingCSV ? (
               <CSVLoadingState />
             ) : csvError ? (
-              <CSVErrorState error={csvError} onRefresh={handleRefreshCSV} />
+              <CSVErrorState error={csvError} onRefresh={handleRefreshCSV} onLoadDefault={handleLoadDefaultCSV} />
             ) : (
               <CalendarArea
                 scale={scale}

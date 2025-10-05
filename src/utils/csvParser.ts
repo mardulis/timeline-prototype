@@ -307,10 +307,10 @@ const parseCSVLine = (line: string): string[] => {
 // Load CSV from public folder
 export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
   try {
-    const response = await fetch('/Case 2.csv'); // Changed to Case 2.csv as default
+    const response = await fetch('/csv/Test.csv'); // Back to original Test.csv
     if (!response.ok) {
       if (process.env.NODE_ENV === 'development') {
-        console.error(`Failed to load CSV: ${response.statusText}`);
+        console.error(`Failed to load Test.csv: ${response.statusText}`);
       }
       return [];
     }
@@ -318,7 +318,7 @@ export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
     const csvContent = await response.text();
     if (!csvContent || csvContent.trim().length === 0) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('CSV file is empty');
+        console.error('Test.csv file is empty');
       }
       return [];
     }
@@ -326,7 +326,35 @@ export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
     return parseCSV(csvContent);
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Error loading CSV:', error);
+      console.error('Error loading Test.csv:', error);
+    }
+    return [];
+  }
+};
+
+// Load Test.csv from public folder
+export const loadTestCSVDocuments = async (): Promise<DocumentData[]> => {
+  try {
+    const response = await fetch('/csv/Test.csv');
+    if (!response.ok) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`Failed to load Test.csv: ${response.statusText}`);
+      }
+      return [];
+    }
+    
+    const csvContent = await response.text();
+    if (!csvContent || csvContent.trim().length === 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Test.csv is empty or contains no data');
+      }
+      return [];
+    }
+    
+    return parseCSV(csvContent);
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error loading Test.csv:', error);
     }
     return [];
   }

@@ -1,0 +1,298 @@
+/* PDF Viewer Light Theme Overrides */
+
+/* Core palette */
+:root {
+  --rpv-color-background: #ffffff;
+  --rpv-color-text: #111827;          /* near-black */
+  --rpv-color-divider: #e5e7eb;       /* light gray */
+  --rpv-color-primary: #111827;       /* icons inherit currentColor */
+  --rpv-color-primary-contrast: #ffffff;
+}
+
+/* Remove all borders from PDF viewer */
+.rpv-core__viewer,
+.rpv-default-layout__container,
+.rpv-default-layout__main {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Hide sidebar completely */
+.rpv-default-layout__sidebar {
+  display: none !important;
+}
+
+/* Ensure main content takes full width */
+.rpv-default-layout__main {
+  width: 100% !important;
+  margin-left: 0 !important;
+}
+
+/* Make toolbar span full width */
+.rpv-default-layout__toolbar {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Style the page input */
+.rpv-core__textbox {
+  width: 40px !important;
+  height: 32px !important;
+  text-align: center !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  background: white !important;
+}
+
+/* Ensure all PDF viewer buttons have proper positioning for custom icons */
+.rpv-core__button {
+  position: relative !important;
+  width: 32px !important;
+  height: 32px !important;
+  border: none !important;
+  background-color: transparent !important;
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+.rpv-core__button:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.rpv-core__button:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Hide all default SVG icons in buttons - More aggressive targeting */
+.rpv-core__button svg,
+.rpv-core__button svg *,
+.rpv-default-layout__toolbar .rpv-core__button svg,
+.rpv-default-layout__toolbar .rpv-core__button svg *,
+.rpv-core__button button svg,
+.rpv-core__button button svg *,
+.rpv-default-layout__toolbar button svg,
+.rpv-default-layout__toolbar button svg *,
+.rpv-core__button[data-testid*="page"] svg,
+.rpv-core__button[data-testid*="rotate"] svg,
+.rpv-core__button[title*="Previous"] svg,
+.rpv-core__button[title*="Next"] svg,
+.rpv-core__button[title*="Rotate"] svg {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Hide text content in buttons */
+.rpv-core__button,
+.rpv-core__button *,
+.rpv-core__button[data-testid*="page"],
+.rpv-core__button[data-testid*="rotate"],
+.rpv-core__button[title*="Previous"],
+.rpv-core__button[title*="Next"],
+.rpv-core__button[title*="Rotate"] {
+  font-size: 0 !important;
+  text-indent: -9999px !important;
+  color: transparent !important;
+}
+
+
+/* Custom toolbar styles for render props approach */
+.my-rpv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #0f172a;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-height: 32px;
+  flex-shrink: 0;
+}
+
+.my-rpv-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.my-rpv-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.my-rpv-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Ensure img tags in buttons are properly styled */
+.my-rpv-btn img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* Page chip aligns with library inputs */
+.my-rpv-pagechip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.my-rpv-pagechip input {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 4px 8px;
+  width: 48px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  /* Remove spinner arrows */
+  -moz-appearance: textfield;
+}
+
+.my-rpv-pagechip input::-webkit-outer-spin-button,
+.my-rpv-pagechip input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Hide dropdown/chevron icons in page chip */
+.my-rpv-pagechip svg,
+.my-rpv-pagechip button svg,
+.rpv-core__button svg[data-testid*="dropdown"],
+.rpv-core__button svg[title*="dropdown"],
+.rpv-core__button svg[aria-label*="dropdown"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide any additional buttons/icons on the right side */
+.rpv-default-layout__toolbar .rpv-core__button:nth-child(n+6),
+.rpv-default-layout__toolbar .rpv-core__button:nth-child(n+7),
+.rpv-default-layout__toolbar .rpv-core__button:nth-child(n+8),
+.rpv-default-layout__toolbar .rpv-core__button:nth-child(n+9),
+.rpv-default-layout__toolbar .rpv-core__button:nth-child(n+10) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide any zoom, download, print, or other extra buttons */
+.rpv-core__button[data-testid*="zoom"],
+.rpv-core__button[data-testid*="download"],
+.rpv-core__button[data-testid*="print"],
+.rpv-core__button[data-testid*="fullscreen"],
+.rpv-core__button[title*="Zoom"],
+.rpv-core__button[title*="Download"],
+.rpv-core__button[title*="Print"],
+.rpv-core__button[title*="Fullscreen"],
+.rpv-core__button[aria-label*="Zoom"],
+.rpv-core__button[aria-label*="Download"],
+.rpv-core__button[aria-label*="Print"],
+.rpv-core__button[aria-label*="Fullscreen"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Optional: neutralize default viewer toolbar visuals if any remain */
+.rpv-core__toolbar,
+.rpv-default-layout__toolbar {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+
+
+
+/* Toolbar container */
+.rpv-core__toolbar,
+.rpv-default-layout__toolbar {
+  background: var(--rpv-color-background) !important;
+  color: var(--rpv-color-text) !important;
+  border-bottom: 1px solid var(--rpv-color-divider) !important;
+}
+
+/* Buttons & icons */
+.rpv-core__button,
+.rpv-core__icon {
+  color: var(--rpv-color-text) !important;
+  fill: currentColor !important;
+}
+.rpv-core__button:hover,
+.rpv-core__dropdown__target:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Inputs / dropdown triggers (page number, zoom) */
+.rpv-core__textbox,
+.rpv-core__dropdown__target {
+  background: #fff !important;
+  color: var(--rpv-color-text) !important;
+  border: 1px solid var(--rpv-color-divider) !important;
+  box-shadow: none !important;
+}
+
+/* Divider lines in the toolbar */
+.rpv-core__toolbar .rpv-core__divider,
+.rpv-default-layout__toolbar .rpv-core__divider {
+  background-color: var(--rpv-color-divider) !important;
+}
+
+/* Viewer + sidebar backgrounds for cohesive light UI */
+.rpv-core__viewer {
+  background: #ffffff !important;
+}
+.rpv-default-layout__sidebar {
+  background: #fafafa !important;
+  border-right: 1px solid var(--rpv-color-divider) !important;
+}
+
+/* Custom toolbar styles (if using custom toolbar) */
+.myLightToolbar {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  color: #111827;
+}
+.myLightToolbar .tlb-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+}
+.myLightToolbar .tlb-divider {
+  width: 1px;
+  height: 22px;
+  background: #e5e7eb;
+  margin: 0 4px;
+}
+.myLightToolbar .page-chip input {
+  background: #fff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 2px 8px;
+  width: 48px; /* adjust as needed */
+}

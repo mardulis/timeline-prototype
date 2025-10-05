@@ -33,7 +33,7 @@ const LeftSidebar: React.FC = () => {
   return (
     <SidebarContainer>
       <LogoContainer>
-        <Logo src="/WD logo blue.svg" alt="WD Logo" />
+        <Logo src="/svg/WD logo blue.svg" alt="WD Logo" />
       </LogoContainer>
     </SidebarContainer>
   );

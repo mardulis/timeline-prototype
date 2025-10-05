@@ -197,7 +197,6 @@ const MonthHeader = styled.div<{ isHighlighted?: boolean }>`
   font-size: 11px;
   font-weight: 600;
   color: ${props => props.isHighlighted ? '#856404' : '#6b7280'};
-  border-radius: 4px;
   margin-bottom: 4px;
   border-left: ${props => props.isHighlighted ? '3px solid #ffc107' : '3px solid transparent'};
   display: flex;
@@ -331,7 +330,7 @@ const YearView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highligh
                               isHighlighted={highlightedMonth?.year === yearGroup.year && highlightedMonth?.month === monthGroup.month}
                             >
                               <DocumentIcon isSelected={selectedDocId === doc.id}>
-                                <img src="/Document.svg" alt="Document" width="16" height="16" />
+                                <img src="/svg/Document.svg" alt="Document" width="16" height="16" />
                               </DocumentIcon>
                               
                               <DocumentInfo>

@@ -289,7 +289,7 @@ const MonthView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlig
                           isHighlighted={highlightedMonth?.year === currentYear && highlightedMonth?.month === monthGroup.month}
                         >
                           <DocumentIcon isSelected={selectedDocId === doc.id}>
-                            <img src="/Document.svg" alt="Document" width="16" height="16" />
+                            <img src="/svg/Document.svg" alt="Document" width="16" height="16" />
                           </DocumentIcon>
                         
                           <DocumentInfo>

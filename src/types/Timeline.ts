@@ -36,6 +36,7 @@ export interface Diagnosis {
 }
 
 export interface DocumentPreviewData {
+  id: string;
   title: string;
   date: string;
   docType: string;
