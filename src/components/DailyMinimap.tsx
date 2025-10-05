@@ -67,7 +67,7 @@ const MinimapBar = styled.div<{ height: number; isActive: boolean; width: number
   }
   
   &:hover {
-    background: ${props => props.hasData ? '#64748b' : 'transparent'}; /* Only hover effect if has data */
+    background: ${props => props.hasData ? '#99C9FF' : 'transparent'}; /* Updated hover color */
     opacity: ${props => props.hasData ? 0.8 : 1}; /* Only opacity change if has data */
   }
 `;
@@ -274,7 +274,7 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
     if (containerRect) {
       // Calculate the center position of the bar relative to the container
       const barCenterX = data.position;
-      const tooltipY = 40; // Fixed position near the top of the minimap
+      const tooltipY = 30; // Raised 10px from 40px to 30px
       const dateStr = new Date(data.year, data.month, data.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       
       // Small delay to prevent flickering
@@ -354,12 +354,25 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
                 left: `${data.position}px`,
                 transform: 'translateX(-50%)',
                 fontSize: '12px',
-                color: data.hasData ? '#1f2937' : '#6b7280', // Dark for days with docs, gray for empty days
+                color: data.hasData ? '#1f2937' : '#6b7280',
+                fontWeight: '500',
                 cursor: 'pointer',
-                display: 'block',
-                userSelect: 'none' // Prevent text selection
+                padding: '2px 4px',
+                borderRadius: '4px',
+                userSelect: 'none', // Prevent text selection
+                transition: 'all 0.2s ease'
               }}
               onClick={() => handleDayClick(data.day)}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLElement;
+                target.style.backgroundColor = '#f3f4f6'; // All days get hover background
+                target.style.color = data.hasData ? '#111827' : '#374151'; // Slightly darker for empty days too
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLElement;
+                target.style.backgroundColor = 'transparent';
+                target.style.color = data.hasData ? '#1f2937' : '#6b7280';
+              }}
             >
               {data.day}
             </span>

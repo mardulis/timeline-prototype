@@ -57,7 +57,7 @@ const MinimapBar = styled.div<{ height: number; isActive: boolean; width: number
   }
   
   &:hover {
-    background: ${props => props.hasData ? '#64748b' : 'transparent'}; /* Only hover effect if has data */
+    background: ${props => props.hasData ? '#99C9FF' : 'transparent'}; /* Updated hover color */
     opacity: ${props => props.hasData ? 0.8 : 1}; /* Only opacity change if has data */
   }
 `;
@@ -269,7 +269,7 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
     if (containerRect) {
       // Calculate the center position of the bar relative to the container
       const barCenterX = data.position;
-      const tooltipY = 40; // Fixed position near the top of the minimap
+      const tooltipY = 30; // Raised 10px from 40px to 30px
         const dateStr = new Date(currentYear, data.month, data.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       
       // Small delay to prevent flickering
@@ -304,17 +304,19 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
       // Find all bars for this month
       const monthBars = yearlyDataWithHeights.filter(d => d.month === monthIndex);
       
-      if (monthBars.length === 0) return null; // Only show label if month has documents
-      
-      // Position label at the start of the month's bars
-      const firstBar = monthBars[0];
-      const position = firstBar.position;
+      // Calculate position based on month index (even if no bars)
+      const totalDays = yearlyDataWithHeights.length;
+      const daysPerMonth = totalDays / 12;
+      const monthStartIndex = monthIndex * daysPerMonth;
+      const firstBar = yearlyDataWithHeights[Math.floor(monthStartIndex)];
+      const position = firstBar ? firstBar.position : (monthIndex * (totalDays / 12) * 4) + 24;
       
       return {
         monthName,
-        position
+        position,
+        hasData: monthBars.length > 0
       };
-    }).filter(Boolean);
+    });
   }, [yearlyDataWithHeights]);
 
   return (
@@ -361,13 +363,6 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
       
       <MonthLabels>
         {monthLabels.map((label, index) => {
-          if (!label) return null;
-          
-          const hasData = docs.some(doc => {
-            const docDate = new Date(doc.date);
-            return docDate.getFullYear() === currentYear && docDate.getMonth() === index;
-          });
-          
           return (
             <span 
               key={label.monthName} 
@@ -376,14 +371,25 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
                 left: `${label.position}px`,
                 transform: 'translateX(-50%)',
                 fontSize: '12px',
-                color: hasData ? '#1f2937' : '#6b7280',
+                color: label.hasData ? '#1f2937' : '#6b7280',
                 fontWeight: '500',
                 cursor: 'pointer',
                 padding: '2px 4px',
                 borderRadius: '4px',
-                userSelect: 'none' // Prevent text selection
+                userSelect: 'none', // Prevent text selection
+                transition: 'all 0.2s ease'
               }}
               onClick={() => handleMonthClick(index)}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLElement;
+                target.style.backgroundColor = '#f3f4f6'; // All months get hover background
+                target.style.color = label.hasData ? '#111827' : '#374151'; // Slightly darker for empty months too
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLElement;
+                target.style.backgroundColor = 'transparent';
+                target.style.color = label.hasData ? '#1f2937' : '#6b7280';
+              }}
             >
               {label.monthName}
             </span>

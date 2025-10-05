@@ -196,7 +196,7 @@ const MinimapBar = styled.div<{ height: number; isActive: boolean; width: number
   }
   
   &:hover {
-    background: ${props => props.hasData ? '#64748b' : 'transparent'}; /* Only hover effect if has data */
+    background: ${props => props.hasData ? '#99C9FF' : 'transparent'}; /* Updated hover color */
     opacity: ${props => props.hasData ? 0.8 : 1}; /* Only opacity change if has data */
   }
 `;
@@ -491,7 +491,7 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
       // Calculate the center position of the bar relative to the container
       const barCenterX = data.position;
       // Calculate Y position higher up to avoid obscuring bars
-      const tooltipY = 40; // Fixed position near the top of the minimap
+      const tooltipY = 30; // Raised 10px from 40px to 30px
       
       // Small delay to prevent flickering
       const timeout = setTimeout(() => {

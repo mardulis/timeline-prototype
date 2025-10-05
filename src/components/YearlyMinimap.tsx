@@ -27,7 +27,7 @@ const MinimapBar = styled.div<{ height: number; isActive: boolean }>`
   position: relative;
   
   &:hover {
-    background: #6b7280;
+    background: #99C9FF; /* Updated hover color */
     opacity: 0.8;
   }
 `;
@@ -51,7 +51,19 @@ const MonthLabels = styled.div`
   justify-content: space-between;
   margin-top: 8px;
   font-size: 12px;
-  color: #6b7280;
+  color: #4b5563;
+  height: 20px;
+  position: relative;
+`;
+
+const Baseline = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0.5px;
+  background: #d1d5db;
+  z-index: 1;
 `;
 
 interface YearlyMinimapProps {
@@ -116,6 +128,7 @@ const YearlyMinimap: React.FC<YearlyMinimapProps> = ({
   return (
     <MinimapContainer>
       <MinimapWrapper>
+        <Baseline />
         {monthlyData.map((data, index) => (
           <MinimapBar
             key={data.month}
@@ -133,9 +146,37 @@ const YearlyMinimap: React.FC<YearlyMinimapProps> = ({
       </MinimapWrapper>
       
       <MonthLabels>
-        {monthlyData.map(data => (
-          <span key={data.month}>{data.monthName}</span>
-        ))}
+        {monthlyData.map((data, index) => {
+          const hasData = data.count > 0;
+          return (
+            <span 
+              key={data.month}
+              style={{ 
+                fontSize: '12px',
+                color: hasData ? '#1f2937' : '#6b7280',
+                fontWeight: '500',
+                cursor: 'pointer',
+                padding: '2px 4px',
+                borderRadius: '4px',
+                userSelect: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              onClick={() => handleBarClick(data.month)}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLElement;
+                target.style.backgroundColor = '#f3f4f6'; // All months get hover background
+                target.style.color = hasData ? '#111827' : '#374151'; // Slightly darker for empty months too
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLElement;
+                target.style.backgroundColor = 'transparent';
+                target.style.color = hasData ? '#1f2937' : '#6b7280';
+              }}
+            >
+              {data.monthName}
+            </span>
+          );
+        })}
       </MonthLabels>
     </MinimapContainer>
   );
