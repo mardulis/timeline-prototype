@@ -89,19 +89,39 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
     // Reset states when pdfPath changes
     setIsLoading(true);
     setHasError(false);
+    
+    // Test if the PDF file exists by trying to fetch it
+    const testPDF = async () => {
+      try {
+        console.log('Testing PDF availability:', pdfPath);
+        const response = await fetch(pdfPath, { method: 'HEAD' });
+        console.log('PDF fetch response:', response.status, response.statusText);
+        
+        if (response.ok) {
+          console.log('PDF file exists and is accessible');
+          setIsLoading(false);
+        } else {
+          console.log('PDF file not accessible:', response.status);
+          setIsLoading(false);
+          setHasError(true);
+        }
+      } catch (error) {
+        console.log('Error testing PDF:', error);
+        setIsLoading(false);
+        setHasError(true);
+      }
+    };
+    
+    testPDF();
   }, [pdfPath]);
 
   const handleLoad = () => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('PDF loaded successfully:', pdfPath);
-    }
+    console.log('PDF loaded successfully:', pdfPath);
     setIsLoading(false);
   };
 
   const handleError = () => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('PDF failed to load:', pdfPath);
-    }
+    console.log('PDF failed to load:', pdfPath);
     setIsLoading(false);
     setHasError(true);
   };
@@ -110,6 +130,7 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isLoading) {
+        console.log('PDF loading timeout after 10 seconds');
         setIsLoading(false);
         setHasError(true);
       }
@@ -124,12 +145,14 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
         <ErrorContainer>
           <ErrorTitle>PDF Preview Not Available</ErrorTitle>
           <ErrorMessage>
-            Your browser doesn't support PDF preview in this format. 
-            You can download the document to view it.
+            The PDF file could not be loaded. This might be due to browser compatibility or file access issues.
           </ErrorMessage>
           <DownloadButton href={pdfPath} download target="_blank">
             📄 Download PDF
           </DownloadButton>
+          <div style={{ marginTop: '16px', fontSize: '12px', color: '#9ca3af' }}>
+            PDF Path: {pdfPath}
+          </div>
         </ErrorContainer>
       </PDFViewerContainer>
     );
@@ -141,6 +164,9 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
         <LoadingContainer>
           <LoadingSpinner />
           <div>Loading PDF...</div>
+          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
+            {pdfPath}
+          </div>
         </LoadingContainer>
       )}
       <PDFFrame

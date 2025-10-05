@@ -507,9 +507,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
       ) : (
         <PDFViewer pdfPath={`/${(() => {
           const pdfFile = getPDFForDocument();
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Passing PDF path to viewer:', `/${pdfFile}`);
-          }
+          console.log('Passing PDF path to viewer:', `/${pdfFile}`);
           return pdfFile;
         })()}`} />
       )}
