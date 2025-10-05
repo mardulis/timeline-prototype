@@ -1,46 +1,65 @@
-# Getting Started with Create React App
+# Timeline Prototype
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A React-based timeline application for visualizing documents across different time scales (Year, Month, Day views).
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Multi-scale Timeline Views**: Year, Month, and Day perspectives
+- **Interactive Minimap**: Navigate quickly through time periods
+- **Document Preview Panel**: View document details without losing context
+- **Smart Scrolling**: Intelligent horizontal and vertical scrolling
+- **Responsive Design**: Works on desktop and mobile devices
 
-### `npm start`
+## Local Development
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+```bash
+# Install dependencies
+npm install
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+# Start development server
+npm start
 
-### `npm test`
+# Build for production
+npm run build
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Deployment
 
-### `npm run build`
+This app is configured for easy deployment to Vercel:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. **Install Vercel CLI** (if not already installed):
+   ```bash
+   npm i -g vercel
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. **Deploy to Vercel**:
+   ```bash
+   vercel
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. **Follow the prompts**:
+   - Link to existing project or create new one
+   - Choose your Vercel account
+   - Confirm build settings (should auto-detect React)
 
-### `npm run eject`
+4. **Get your live URL** and share with others!
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## Alternative Deployment Methods
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- **GitHub Integration**: Connect your GitHub repo to Vercel for automatic deployments
+- **Manual Upload**: Use Vercel's web interface to upload the `build` folder
+- **Other Platforms**: Netlify, AWS S3, or any static hosting service
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Technical Details
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+- **Framework**: React 19 with TypeScript
+- **Styling**: Styled Components
+- **Build Tool**: Create React App
+- **Deployment**: Optimized for Vercel with caching headers
 
-## Learn More
+## Browser Support
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)

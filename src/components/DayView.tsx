@@ -1,0 +1,293 @@
+import React, { useMemo } from 'react';
+import styled from 'styled-components';
+import { ViewProps, Doc } from '../types/Timeline';
+
+const DayViewContainer = styled.div`
+  flex: 1;
+  background: white;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+`;
+
+const DayGrid = styled.div`
+  flex: 1;
+  overflow-x: auto; /* Enable horizontal scrolling */
+  overflow-y: auto; /* Allow vertical scrolling for columns */
+  padding: 16px 24px;
+  scroll-behavior: auto; /* Precise positioning for programmatic scrolling */
+  display: flex;
+  border-radius: 8px;
+  background-color: #fff;
+  
+  /* Smooth transitions for manual scrolling */
+  transition: scroll-behavior 0.2s ease-out;
+  
+  /* Custom horizontal scrollbar styling */
+  &::-webkit-scrollbar {
+    height: 8px; /* Height for horizontal scrollbar */
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent; /* Light track background */
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #e5e7eb; /* Light gray thumb */
+    border-radius: 4px;
+  }
+  
+  &:hover::-webkit-scrollbar-thumb {
+    background: #d1d5db; /* Slightly darker on hover */
+  }
+`;
+
+const DayColumns = styled.div`
+  display: flex;
+  min-width: max-content;
+  height: 100%; /* Ensure columns can scroll individually */
+`;
+
+const DayColumn = styled.div<{ isEmpty?: boolean; isFirst?: boolean; isLast?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  border-right: ${props => props.isLast ? '1px solid #e5e7eb' : '1px dashed #e5e7eb'}; /* Solid right border for last column, dashed for others */
+  border-bottom: 1px solid #e5e7eb; /* Bottom border for calendar table */
+  border-left: ${props => props.isFirst ? '1px solid #e5e7eb' : 'none'}; /* Solid left border for first column */
+  border-radius: ${props => {
+    if (props.isFirst && props.isLast) return '0 0 8px 8px'; // Both first and last
+    if (props.isFirst) return '0 0 0 8px'; // Left bottom radius for first column
+    if (props.isLast) return '0 0 8px 0'; // Right bottom radius for last column
+    return '0';
+  }};
+  padding: 0; /* Remove padding from column container */
+  min-width: ${props => props.isEmpty ? '160px' : '200px'};
+  width: ${props => props.isEmpty ? '160px' : '300px'};
+  flex-shrink: 0;
+  height: 100%;
+`;
+
+const ColumnHeader = styled.div<{ isFirst?: boolean; isLast?: boolean }>`
+  background: #f8fafc;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1f2937;
+  padding: 12px 16px;
+  border-radius: ${props => props.isFirst ? '8px 0 0 0' : props.isLast ? '0 8px 0 0' : '0'};
+  text-align: left;
+  border-left: ${props => props.isFirst ? '1px solid #e5e7eb' : 'none'};
+  border-right: 1px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb; /* Add top border */
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 30; /* Higher than minimap (z-index: 20) */
+`;
+
+const DayName = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+`;
+
+const DayNumber = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+`;
+
+const DocumentList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 0; /* Remove padding so documents span full width */
+  padding-top: 0; /* No top padding since header has bottom border */
+  scroll-behavior: smooth;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+  }
+  
+  &:hover::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+  }
+`;
+
+const DocumentItem = styled.div<{ isSelected: boolean; isHighlighted?: boolean; isFirst?: boolean }>`
+  padding: ${props => props.isFirst ? '12px 8px 2px 8px' : '2px 8px'}; /* 12px top padding for first item, 2px for others */
+  margin-bottom: 2px;
+`;
+
+const DocumentItemContent = styled.div<{ isSelected: boolean; isHighlighted?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px; /* Changed from 4px to 8px for proper internal spacing */
+  border-radius: 8px;
+  cursor: ${props => props.isSelected ? 'default' : 'pointer'};
+  transition: background-color 0.2s ease, color 0.2s ease;
+  color: ${props => props.isSelected ? '#1a73e8' : '#1a1a1a'};
+  background-color: ${props => props.isSelected ? '#eaf2ff' : 'transparent'};
+  font-weight: ${props => props.isSelected ? '500' : '400'};
+  
+  &:hover {
+    background-color: ${props => props.isSelected ? '#eaf2ff' : '#f5f7fa'};
+    cursor: pointer;
+  }
+`;
+
+const DocumentIcon = styled.div<{ isSelected: boolean }>`
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+`;
+
+const DocumentInfo = styled.div`
+  flex: 1;
+`;
+
+const DocumentTitle = styled.div`
+  font-size: 13px;
+  font-weight: inherit;
+  color: inherit;
+  margin-bottom: 2px;
+  line-height: 1.3;
+`;
+
+const DocumentTime = styled.div`
+  font-size: 10px;
+  color: inherit;
+  opacity: 0.7;
+`;
+
+const EmptyState = styled.div`
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 14px;
+  padding: 12px 0 0 12px; /* 12px top and left padding */
+`;
+
+const EmptyColumn = styled.div`
+  min-width: 620px;
+  width: 620px;
+  flex-shrink: 0;
+  background: transparent;
+`;
+
+const DayView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlightedMonth, currentYear = 2021, currentMonth = 0 }) => {
+  // Group documents by day for the current month
+  const dayGroups = useMemo(() => {
+    const groups: { [day: string]: Doc[] } = {};
+    
+    docs.forEach(doc => {
+      const docDate = new Date(doc.date);
+      if (docDate.getFullYear() === currentYear && docDate.getMonth() === currentMonth) {
+        const day = docDate.getDate().toString();
+        if (!groups[day]) {
+          groups[day] = [];
+        }
+        groups[day].push(doc);
+      }
+    });
+
+    // Create array of days with documents
+    const dayArray = [];
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayStr = day.toString();
+      const dayDocs = groups[dayStr] ? 
+        groups[dayStr].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
+      
+      dayArray.push({
+        day,
+        dayName: new Date(currentYear, currentMonth, day).toLocaleDateString('en-US', { weekday: 'long' }),
+        docs: dayDocs
+      });
+    }
+    
+    return dayArray;
+  }, [docs, currentYear, currentMonth]);
+
+  const handleDocSelect = (doc: Doc) => {
+    onSelect(doc);
+  };
+
+  return (
+    <DayViewContainer>
+      <DayGrid className="scrollable-grid">
+        <DayColumns>
+          {dayGroups.map((dayGroup, index) => {
+            const isFirst = index === 0;
+            const isLast = index === dayGroups.length - 1;
+            return (
+              <DayColumn key={dayGroup.day} data-day={dayGroup.day} isEmpty={dayGroup.docs.length === 0} isFirst={isFirst} isLast={isLast}>
+                <ColumnHeader isFirst={isFirst} isLast={isLast}>
+                  <DayName>{dayGroup.dayName}</DayName> <DayNumber>{dayGroup.day}</DayNumber>
+                </ColumnHeader>
+              
+              <DocumentList>
+                {dayGroup.docs.length === 0 ? (
+                  <EmptyState>No documents</EmptyState>
+                ) : (
+                  dayGroup.docs.map((doc, docIndex) => (
+                    <DocumentItem
+                      key={doc.id}
+                      isSelected={selectedDocId === doc.id}
+                      isHighlighted={highlightedMonth?.year === currentYear && highlightedMonth?.month === currentMonth}
+                      isFirst={docIndex === 0}
+                      onClick={() => handleDocSelect(doc)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleDocSelect(doc);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-pressed={selectedDocId === doc.id}
+                      data-doc-id={doc.id}
+                    >
+                      <DocumentItemContent
+                        isSelected={selectedDocId === doc.id}
+                        isHighlighted={highlightedMonth?.year === currentYear && highlightedMonth?.month === currentMonth}
+                      >
+                        <DocumentIcon isSelected={selectedDocId === doc.id}>
+                          <img src="/Document.svg" alt="Document" width="16" height="16" />
+                        </DocumentIcon>
+                      
+                        <DocumentInfo>
+                          <DocumentTitle>{doc.title}</DocumentTitle>
+                          <DocumentTime>
+                            {new Date(doc.date).toLocaleTimeString('en-US', { 
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </DocumentTime>
+                        </DocumentInfo>
+                      </DocumentItemContent>
+                    </DocumentItem>
+                  ))
+                )}
+              </DocumentList>
+            </DayColumn>
+            );
+          })}
+          <EmptyColumn />
+        </DayColumns>
+      </DayGrid>
+    </DayViewContainer>
+  );
+};
+
+export default DayView;
