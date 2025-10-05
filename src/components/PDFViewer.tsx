@@ -94,7 +94,9 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
     const testPDF = async () => {
       try {
         console.log('Testing PDF availability:', pdfPath);
-        const response = await fetch(pdfPath, { method: 'HEAD' });
+        const encodedPath = encodeURI(pdfPath);
+        console.log('Encoded PDF path:', encodedPath);
+        const response = await fetch(encodedPath, { method: 'HEAD' });
         console.log('PDF fetch response:', response.status, response.statusText);
         
         if (response.ok) {
@@ -170,7 +172,7 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
         </LoadingContainer>
       )}
       <PDFFrame
-        src={`${pdfPath}#toolbar=1&navpanes=1&scrollbar=1`}
+        src={`${encodeURI(pdfPath)}#toolbar=1&navpanes=1&scrollbar=1`}
         title="PDF Document"
         onLoad={handleLoad}
         onError={handleError}
