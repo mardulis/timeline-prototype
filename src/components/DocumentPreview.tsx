@@ -284,8 +284,24 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
     'test WC WF - 2025-09-23 - Index with Summary (10).pdf'
   ];
 
-  // Function to randomly select a PDF file
-  const getRandomPDF = () => {
+  // Function to get PDF file based on document title or type
+  const getPDFForDocument = () => {
+    if (!document) return pdfFiles[0]; // Fallback if no document
+    
+    const title = document.title.toLowerCase();
+    
+    // Try to match document title with PDF filename
+    if (title.includes('aida') || title.includes('maldonado')) {
+      return 'Aida Maldonado Vega - 2024-12-04 (3).pdf';
+    }
+    if (title.includes('ocf') || title.includes('18')) {
+      return 'OCF18-1pg (2).pdf';
+    }
+    if (title.includes('test') || title.includes('wc') || title.includes('wf')) {
+      return 'test WC WF - 2025-09-23 - Index with Summary (10).pdf';
+    }
+    
+    // Fallback to random selection
     const randomIndex = Math.floor(Math.random() * pdfFiles.length);
     return pdfFiles[randomIndex];
   };
@@ -473,7 +489,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
           </AccordionCard>
         </PreviewContent>
       ) : (
-        <PDFViewer pdfPath={`/${getRandomPDF()}`} />
+        <PDFViewer pdfPath={`/${getPDFForDocument()}`} />
       )}
     </PreviewContainer>
   );
