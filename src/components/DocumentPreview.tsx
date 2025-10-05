@@ -279,9 +279,9 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
 
   // Available PDF files in the public folder
   const pdfFiles = [
-    'Aida Maldonado Vega - 2024-12-04 (3).pdf',
-    'OCF18-1pg (2).pdf',
-    'test WC WF - 2025-09-23 - Index with Summary (10).pdf'
+    'Aida Maldonado Vega - 2024-12-04 - 3.pdf',
+    'OCF18-1pg - 2.pdf',
+    'test WC WF - 2025-09-23 - Index with Summary - 10.pdf'
   ];
 
   // Function to get PDF file based on document title or type
@@ -298,19 +298,19 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
       if (process.env.NODE_ENV === 'development') {
         console.log('Matched Aida PDF');
       }
-      return 'Aida Maldonado Vega - 2024-12-04 (3).pdf';
+      return 'Aida Maldonado Vega - 2024-12-04 - 3.pdf';
     }
     if (title.includes('ocf') || title.includes('18')) {
       if (process.env.NODE_ENV === 'development') {
         console.log('Matched OCF PDF');
       }
-      return 'OCF18-1pg (2).pdf';
+      return 'OCF18-1pg - 2.pdf';
     }
     if (title.includes('test') || title.includes('wc') || title.includes('wf')) {
       if (process.env.NODE_ENV === 'development') {
         console.log('Matched Test PDF');
       }
-      return 'test WC WF - 2025-09-23 - Index with Summary (10).pdf';
+      return 'test WC WF - 2025-09-23 - Index with Summary - 10.pdf';
     }
     
     // Fallback to random selection
