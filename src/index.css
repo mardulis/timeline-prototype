@@ -12,85 +12,90 @@ code {
     monospace;
 }
 
-/* === Scroll Fade: Top/Bottom gradient hints for overflow columns === */
+/* ===============================
+   Scroll Fades (Theme-agnostic)
+   Uses CSS masks to fade content
+   =============================== */
 
-/* Tune these per theme */
 .scroll-fade {
-  --fade-bg: #ffffff;      /* background behind the content */
-  --fade-size: 36px;       /* gradient height */
-  --fade-strength: 1;      /* 0..1 opacity multiplier */
   position: relative;
-  overflow: auto;          /* must scroll */
+  overflow: auto;             /* the scroll container */
   -webkit-overflow-scrolling: touch;
+  --fade-size: 36px;          /* tweak fade height */
 }
 
-/* Top & bottom overlays */
-.scroll-fade::before,
-.scroll-fade::after {
-  content: "";
-  position: sticky;        /* stays pinned to top/bottom while scrolling */
-  left: 0; right: 0;
-  height: var(--fade-size);
-  pointer-events: none;
-  z-index: 1;
-  display: none;           /* toggled on via classes */
+/* Inner wrapper that receives the mask */
+.scroll-inner {
+  /* nothing special here; your content flows normally */
 }
 
-/* Top fade */
-.scroll-fade::before {
-  top: 0;
-  background-image: linear-gradient(
-    to bottom,
-    #ffffff 0%,
-    rgba(255,255,255,0.8) 50%,
-    rgba(255,255,255,0) 100%
-  );
-  background-color: transparent;
+/* Default: no fades */
+.scroll-fade:not(.has-overflow) .scroll-inner {
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
-/* Bottom fade */
-.scroll-fade::after {
-  bottom: 0;
-  background-image: linear-gradient(
-    to top,
-    #ffffff 0%,
-    rgba(255,255,255,0.8) 50%,
-    rgba(255,255,255,0) 100%
-  );
-  background-color: transparent;
-}
-
-/* Show/hide based on scroll position */
-.scroll-fade.has-overflow:not(.at-top)::before { display: block; }
-.scroll-fade.has-overflow:not(.at-bottom)::after { display: block; }
-
-/* Optional: dark mode support */
-@media (prefers-color-scheme: dark) {
-  .scroll-fade::before {
-    background-image: linear-gradient(
-      to bottom,
-      #0b0d10 0%,
-      rgba(11,13,16,0.8) 50%,
-      rgba(11,13,16,0) 100%
-    );
-    background-color: transparent;
+/* Helper to build a top fade mask */
+@supports ((mask-image: linear-gradient(black, transparent)) or (-webkit-mask-image: linear-gradient(black, transparent))) {
+  .scroll-fade.has-overflow.at-top .scroll-inner {
+    /* Only bottom fade visible */
+    -webkit-mask-image:
+      linear-gradient(to bottom, black calc(100% - var(--fade-size)), transparent 100%);
+    mask-image:
+      linear-gradient(to bottom, black calc(100% - var(--fade-size)), transparent 100%);
   }
-  .scroll-fade::after {
-    background-image: linear-gradient(
-      to top,
-      #0b0d10 0%,
-      rgba(11,13,16,0.8) 50%,
-      rgba(11,13,16,0) 100%
-    );
-    background-color: transparent;
+
+  .scroll-fade.has-overflow.at-bottom .scroll-inner {
+    /* Only top fade visible */
+    -webkit-mask-image:
+      linear-gradient(to top, black calc(100% - var(--fade-size)), transparent 100%);
+    mask-image:
+      linear-gradient(to top, black calc(100% - var(--fade-size)), transparent 100%);
+  }
+
+  .scroll-fade.has-overflow:not(.at-top):not(.at-bottom) .scroll-inner {
+    /* Top + bottom fades (two masks combined) */
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0, black var(--fade-size), black calc(100% - var(--fade-size)), transparent 100%);
+    mask-image:
+      linear-gradient(to bottom, transparent 0, black var(--fade-size), black calc(100% - var(--fade-size)), transparent 100%);
+  }
+
+  /* Improve mask quality on Safari/WebKit */
+  .scroll-fade .scroll-inner {
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
   }
 }
 
-/* Respect users who prefer less effects */
-@media (prefers-reduced-transparency: reduce) {
+/* ---------- Fallback (no mask support): subtle overlays ----------
+   These use theme-aware transparency to avoid "black bars".
+*/
+@supports not (mask-image: linear-gradient(black, transparent)) and not (-webkit-mask-image: linear-gradient(black, transparent)) {
   .scroll-fade::before,
   .scroll-fade::after {
-    background-image: none;
-    background-color: transparent;
+    content: "";
+    position: sticky;
+    left: 0; right: 0;
+    height: var(--fade-size);
+    pointer-events: none;
+    z-index: 1;
+    display: none;
+    /* Use background of the scroll area via a translucent layer */
+    background: linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0));
+  }
+  .scroll-fade::before { top: 0; transform: scaleY(-1); } /* invert to get top fade */
+  .scroll-fade::after { bottom: 0; }
+
+  .scroll-fade.has-overflow:not(.at-top)::before { display: block; }
+  .scroll-fade.has-overflow:not(.at-bottom)::after { display: block; }
+
+  @media (prefers-color-scheme: light) {
+    .scroll-fade::before,
+    .scroll-fade::after {
+      background: linear-gradient(to bottom, rgba(255,255,255,0.75), rgba(255,255,255,0));
+    }
   }
 }

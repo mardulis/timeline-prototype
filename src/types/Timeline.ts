@@ -62,11 +62,14 @@ export interface CalendarAreaProps {
   currentYear?: number;
   currentMonth?: number; // Added for day view
   currentDay?: number; // Added for day view
+  highlightedDate?: Date | null; // Add highlighted date prop
   onYearChange?: (year: number) => void; // Callback when year changes
   onMonthChange?: (month: number) => void; // Callback when month changes
   onDayChange?: (day: number) => void; // Callback when day changes
   onManualNavigationStart?: () => void; // Callback when manual navigation starts
   manualNavigationRef?: React.MutableRefObject<boolean>; // Ref to track manual navigation
+  scrollToDateRef?: React.MutableRefObject<((date: Date) => void) | null>; // Ref to expose scrollToDate function
+  onHighlightedDate?: (date: Date | null) => void; // Callback when date is highlighted
 }
 
 export interface ViewProps {
@@ -75,6 +78,7 @@ export interface ViewProps {
   onSelect: (doc: Doc) => void;
   onNavigate?: (direction: 'prev' | 'next') => void;
   highlightedMonth?: { year: number; month: number };
+  highlightedDate?: Date | null; // Add highlighted date prop
   currentYear?: number;
   currentMonth?: number; // Added for day view
   currentDay?: number; // Added for day view
@@ -94,6 +98,7 @@ export interface ActivityHistogramProps {
 export interface TopPanelProps {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
+  onLoadCSV?: (file: File) => void;
 }
 
 export interface SearchAndControlsProps {
@@ -109,6 +114,8 @@ export interface SearchAndControlsProps {
   currentMonth?: number; // Current month being displayed
   currentDay?: number; // Current day being displayed
   onManualNavigationStart?: () => void; // Callback when manual navigation starts
+  onHighlightedDate?: (date: Date | null) => void; // Callback when date is highlighted
+  scrollToDateRef?: React.MutableRefObject<((date: Date) => void) | null>; // Ref to trigger scrolling to specific date
 }
 
 export interface DocumentPreviewProps {

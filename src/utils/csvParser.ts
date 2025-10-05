@@ -24,25 +24,92 @@ const generateMockMedications = (): string[] => {
     'Amlodipine 5mg',
     'Metoprolol 25mg',
     'Losartan 50mg',
-    'Simvastatin 20mg'
+    'Simvastatin 20mg',
+    'Gabapentin 300mg',
+    'Tramadol 50mg',
+    'Hydrocodone 5mg',
+    'Oxycodone 10mg',
+    'Morphine 15mg',
+    'Fentanyl 25mcg',
+    'Diazepam 5mg',
+    'Lorazepam 1mg',
+    'Alprazolam 0.5mg',
+    'Sertraline 50mg',
+    'Fluoxetine 20mg',
+    'Citalopram 20mg',
+    'Escitalopram 10mg',
+    'Venlafaxine 75mg',
+    'Bupropion 150mg',
+    'Trazodone 50mg',
+    'Quetiapine 25mg',
+    'Risperidone 1mg',
+    'Olanzapine 5mg',
+    'Haloperidol 2mg',
+    'Prednisone 20mg',
+    'Methylprednisolone 4mg',
+    'Hydrocortisone 20mg',
+    'Insulin Glargine 100 units/mL',
+    'Insulin Lispro 100 units/mL',
+    'Metformin ER 500mg',
+    'Glipizide 5mg',
+    'Glyburide 5mg',
+    'Pioglitazone 15mg',
+    'Sitagliptin 100mg',
+    'Empagliflozin 10mg',
+    'Canagliflozin 100mg',
+    'Dapagliflozin 10mg',
+    'Warfarin 5mg',
+    'Apixaban 5mg',
+    'Rivaroxaban 20mg',
+    'Dabigatran 150mg',
+    'Clopidogrel 75mg',
+    'Aspirin 81mg',
+    'Ticagrelor 90mg',
+    'Prasugrel 10mg'
   ];
-  return [medications[Math.floor(Math.random() * medications.length)]];
+  
+  // Return 1-4 random medications
+  const count = Math.floor(Math.random() * 4) + 1;
+  const selected: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const med = medications[Math.floor(Math.random() * medications.length)];
+    if (!selected.includes(med)) {
+      selected.push(med);
+    }
+  }
+  return selected.length > 0 ? selected : [medications[0]];
 };
 
 const generateMockDiagnoses = (): string[] => {
   const diagnoses = [
-    'Hypertension',
-    'Type 2 Diabetes',
-    'Hyperlipidemia',
-    'GERD',
-    'Anxiety',
-    'Depression',
-    'Osteoarthritis',
-    'Chronic Pain',
-    'Migraine',
-    'Insomnia'
+    'Hypertension', 'Type 2 Diabetes', 'Hyperlipidemia', 'GERD', 'Anxiety', 'Depression',
+    'Osteoarthritis', 'Chronic Pain', 'Migraine', 'Insomnia', 'COPD', 'Asthma', 'Pneumonia',
+    'Myocardial Infarction', 'Atrial Fibrillation', 'Heart Failure', 'Stroke', 'TIA',
+    'Chronic Kidney Disease', 'Acute Kidney Injury', 'Liver Cirrhosis', 'Hepatitis C',
+    'Rheumatoid Arthritis', 'Lupus', 'Fibromyalgia', 'Multiple Sclerosis', 'Parkinson\'s Disease',
+    'Alzheimer\'s Disease', 'Dementia', 'Bipolar Disorder', 'PTSD', 'Schizophrenia',
+    'Crohn\'s Disease', 'Ulcerative Colitis', 'Irritable Bowel Syndrome', 'Diverticulitis',
+    'Gallstones', 'Pancreatitis', 'Appendicitis', 'Hernia', 'Kidney Stones',
+    'Urinary Tract Infection', 'Prostate Cancer', 'Breast Cancer', 'Lung Cancer',
+    'Colon Cancer', 'Diabetes Mellitus Type 1', 'Hypothyroidism', 'Hyperthyroidism',
+    'Cushing\'s Syndrome', 'Addison\'s Disease', 'Osteoporosis', 'Osteopenia',
+    'Anemia', 'Thrombocytopenia', 'Leukemia', 'Lymphoma', 'Sepsis', 'Cellulitis',
+    'Endocarditis', 'Meningitis', 'Encephalitis', 'Tuberculosis', 'HIV/AIDS',
+    'Hepatitis B', 'Herpes Zoster', 'Influenza', 'COVID-19', 'Pneumonia',
+    'Bronchitis', 'Sinusitis', 'Otitis Media', 'Conjunctivitis', 'Cataracts',
+    'Glaucoma', 'Macular Degeneration', 'Retinal Detachment', 'Diabetic Retinopathy'
   ];
-  return [diagnoses[Math.floor(Math.random() * diagnoses.length)]];
+  
+  // Return 1-3 random diagnoses
+  const count = Math.floor(Math.random() * 3) + 1;
+  const selected: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const diag = diagnoses[Math.floor(Math.random() * diagnoses.length)];
+    if (!selected.includes(diag)) {
+      selected.push(diag);
+    }
+  }
+  return selected.length > 0 ? selected : [diagnoses[0]];
 };
 
 const generateMockLabs = (): string[] => {
@@ -61,11 +128,43 @@ const generateMockLabs = (): string[] => {
   return [labs[Math.floor(Math.random() * labs.length)]];
 };
 
+// Expected CSV columns for validation
+const EXPECTED_COLUMNS = [
+  'Page #',
+  'Title', 
+  'Doc Type',
+  'Author',
+  'Facility',
+  'Date',
+  'Pages',
+  'Summary'
+];
+
+// Validate CSV structure
+const validateCSVStructure = (headers: string[]): boolean => {
+  // Check if all expected columns are present
+  const hasAllColumns = EXPECTED_COLUMNS.every(expectedCol => 
+    headers.some(header => header.trim() === expectedCol)
+  );
+  
+  if (!hasAllColumns) {
+    console.warn('CSV missing expected columns. Expected:', EXPECTED_COLUMNS, 'Found:', headers);
+  }
+  
+  return hasAllColumns;
+};
+
 // Parse CSV content
 export const parseCSV = (csvContent: string): DocumentData[] => {
   // Split by lines but handle multi-line quoted fields
   const lines = parseCSVLines(csvContent);
   const headers = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+  
+  // Validate CSV structure
+  const isValidStructure = validateCSVStructure(headers);
+  if (!isValidStructure) {
+    throw new Error(`CSV file must contain the following columns: ${EXPECTED_COLUMNS.join(', ')}`);
+  }
   
   const documents: DocumentData[] = [];
   
@@ -208,7 +307,7 @@ const parseCSVLine = (line: string): string[] => {
 // Load CSV from public folder
 export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
   try {
-    const response = await fetch('/Test.csv');
+    const response = await fetch('/Case 2.csv'); // Changed to Case 2.csv as default
     if (!response.ok) {
       if (process.env.NODE_ENV === 'development') {
         console.error(`Failed to load CSV: ${response.statusText}`);

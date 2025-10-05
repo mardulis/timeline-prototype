@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Doc } from '../types/Timeline';
 
@@ -134,6 +134,17 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
   onMonthClick,
   isPreviewVisible = false
 }) => {
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+
+  // Track viewport width changes
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [tooltip, setTooltip] = useState<{
     visible: boolean;
     x: number;
@@ -193,13 +204,11 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
       let availableWidth;
       if (isPreviewVisible) {
         // When preview panel is visible, scale to available width to the left of preview panel
-        const viewportWidth = window.innerWidth;
         const sidebarWidth = 64; // Left sidebar width
         const previewPanelWidth = 620; // Preview panel width
         availableWidth = viewportWidth - sidebarWidth - previewPanelWidth - leftPadding - 24; // 24px right padding
       } else {
         // When preview panel is not visible, span whole viewport width with 24px right padding
-        const viewportWidth = window.innerWidth;
         const sidebarWidth = 64; // Left sidebar width
         availableWidth = viewportWidth - sidebarWidth - leftPadding - 24; // 24px right padding
       }
@@ -219,7 +228,7 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
         position: position // Position for blue dot
       };
     });
-  }, [yearlyData, maxCount, isPreviewVisible]);
+  }, [yearlyData, maxCount, isPreviewVisible, viewportWidth]);
 
   // Calculate blue dot position for selected document
   const blueDotPosition = useMemo(() => {

@@ -5,6 +5,7 @@ import YearView from './YearView';
 import MonthView from './MonthView';
 import DayView from './DayView';
 import { CalendarAreaProps, Doc } from '../types/Timeline';
+import { computeRightOcclusionPx } from '../utils/scrollIntoViewOcclusionSafe';
 
 const CalendarContainer = styled.div`
   flex: 1;
@@ -66,11 +67,14 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
   currentYear: propCurrentYear = 2021,
   currentMonth: propCurrentMonth = 0,
   currentDay: propCurrentDay = 1,
+  highlightedDate,
   onYearChange,
   onMonthChange,
   onDayChange,
   onManualNavigationStart,
-  manualNavigationRef
+  manualNavigationRef,
+  scrollToDateRef,
+  onHighlightedDate
 }) => {
   const [currentYear, setCurrentYear] = useState(propCurrentYear);
   const [currentMonth, setCurrentMonth] = useState(propCurrentMonth);
@@ -197,56 +201,119 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     scrollDebounceRef.current.set(element, timeoutId);
   }, [smoothScrollTo]);
 
-  // Helper function to perform the actual scroll calculation
+  // Atomic 2D scroll function - handles both horizontal-only and horizontal+vertical scrolling
   const performScrollToKeepVisible = useCallback((selectedDocElement: HTMLElement, scrollableContainer: HTMLElement) => {
-    const containerRect = scrollableContainer.getBoundingClientRect();
-    const docRect = selectedDocElement.getBoundingClientRect();
-    const previewPanelWidth = 620;
-    const visibleAreaRight = containerRect.width - previewPanelWidth;
+    console.log('Using atomic scroll - checking for DocumentList');
     
-    // Enhanced overlap detection: Check both document and its column
-    const docColumn = selectedDocElement.closest('[data-year], [data-month], [data-day]') as HTMLElement;
-    let isOverlapped = docRect.right > visibleAreaRight;
+    // Find the vertical scroll container (DocumentList)
+    const vContainer = selectedDocElement.closest('.DocumentList') as HTMLElement;
     
-    // Also check if the entire column is overlapped
-    if (docColumn) {
-      const columnRect = docColumn.getBoundingClientRect();
-      const isColumnOverlapped = columnRect.right > visibleAreaRight;
-      isOverlapped = isOverlapped || isColumnOverlapped;
+    console.log('DocumentList detection:', {
+      selectedDocElement: selectedDocElement,
+      vContainer: vContainer,
+      docId: selectedDocElement.getAttribute('data-doc-id'),
+      docClasses: selectedDocElement.className
+    });
+    
+    // Compute the right occlusion (preview panel width)
+    const rightOcclusionPx = computeRightOcclusionPx(scrollableContainer);
+    
+    if (vContainer) {
+      console.log('DocumentList found - using horizontal scroll + scrollIntoView for vertical (minimap approach)');
+      
+      // First, handle horizontal scrolling manually
+      const cRect = scrollableContainer.getBoundingClientRect();
+      const tRect = selectedDocElement.getBoundingClientRect();
+      
+      const usableLeft = cRect.left + 12;
+      const usableRight = cRect.left + scrollableContainer.clientWidth - rightOcclusionPx - 12;
+      
+      let deltaX = 0;
+      if (tRect.right > usableRight) {
+        deltaX = (tRect.right - usableRight);
+      } else if (tRect.left < usableLeft) {
+        deltaX = -(usableLeft - tRect.left);
+      }
+      
+      if (deltaX !== 0) {
+        console.log('Horizontal scroll:', { deltaX, rightOcclusionPx });
+        scrollableContainer.scrollTo({
+          left: scrollableContainer.scrollLeft + deltaX,
+          behavior: 'smooth'
+        });
+      }
+      
+      // Then, handle vertical scrolling using scrollIntoView (same as minimap)
+      setTimeout(() => {
+        console.log('Using scrollIntoView for vertical scrolling (minimap approach)');
+        
+        // Check if document is already visible vertically before scrolling
+        const docRect = selectedDocElement.getBoundingClientRect();
+        const listRect = vContainer.getBoundingClientRect();
+        const isDocVisibleVertically = docRect.top >= listRect.top && docRect.bottom <= listRect.bottom;
+        
+        console.log('Vertical visibility check:', {
+          docRect: { top: docRect.top, bottom: docRect.bottom },
+          listRect: { top: listRect.top, bottom: listRect.bottom },
+          isDocVisibleVertically,
+          vContainerScrollTop: vContainer.scrollTop,
+          vContainerScrollHeight: vContainer.scrollHeight,
+          vContainerClientHeight: vContainer.clientHeight
+        });
+        
+        if (!isDocVisibleVertically) {
+          console.log('Document not visible vertically, calling scrollIntoView');
+          selectedDocElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start', // Use 'start' like minimap does
+            inline: 'nearest'
+          });
+        } else {
+          console.log('Document already visible vertically, no scroll needed');
+        }
+      }, 100); // Longer delay to let horizontal scroll complete
+    } else {
+      console.log('No DocumentList found - using horizontal-only scroll');
+      
+      // Fallback to horizontal-only scrolling (for document preview panel case)
+      const cRect = scrollableContainer.getBoundingClientRect();
+      const tRect = selectedDocElement.getBoundingClientRect();
+      
+      const usableLeft = cRect.left + 12;
+      const usableRight = cRect.left + scrollableContainer.clientWidth - rightOcclusionPx - 12;
+      
+      let deltaX = 0;
+      if (tRect.right > usableRight) {
+        deltaX = (tRect.right - usableRight);
+      } else if (tRect.left < usableLeft) {
+        deltaX = -(usableLeft - tRect.left);
+      }
+      
+      if (deltaX !== 0) {
+        console.log('Horizontal-only scroll:', { deltaX, rightOcclusionPx });
+        scrollableContainer.scrollTo({
+          left: scrollableContainer.scrollLeft + deltaX,
+          behavior: 'smooth'
+        });
+      } else {
+        console.log('Document already visible horizontally');
+      }
     }
-    
-    if (!isOverlapped) {
-      // Document and column are not overlapped, no scrolling needed
-      return;
-    }
-    
-    // Calculate the minimum delta scroll needed to keep document visible
-    const currentScrollLeft = scrollableContainer.scrollLeft;
-    const docLeft = docRect.left - containerRect.left + currentScrollLeft;
-    const docRight = docLeft + docRect.width;
-    
-    // Calculate how much we need to scroll to keep document visible
-    const overlapAmount = docRight - visibleAreaRight;
-    const deltaScroll = overlapAmount + 40; // Larger margin for view transitions
-    
-    // Apply delta scroll - no reset, just move the minimum distance
-    const newScrollLeft = currentScrollLeft + deltaScroll;
-    const maxScrollLeft = scrollableContainer.scrollWidth - containerRect.width;
-    const finalScrollLeft = Math.max(0, Math.min(newScrollLeft, maxScrollLeft));
-    
-    // Only scroll if there's actually a change needed
-    if (Math.abs(finalScrollLeft - currentScrollLeft) > 5) {
-      debouncedSmoothScrollTo(scrollableContainer, finalScrollLeft, 50); // Slightly longer delay for view transitions
-    }
-  }, [debouncedSmoothScrollTo]);
+  }, []);
 
   const scrollToKeepDocumentVisible = useCallback((docId: string) => {
-    if (!calendarRef.current || !isPreviewVisible) return;
+    if (!calendarRef.current) {
+      console.log('ScrollToKeepDocumentVisible: Early return - no calendarRef');
+      return;
+    }
     
     // Don't interfere if minimap scrolling is active
     if (scrollStateRef.current.isMinimapScrolling) {
+      console.log('ScrollToKeepDocumentVisible: Minimap scrolling active, skipping');
       return;
     }
+    
+    console.log('ScrollToKeepDocumentVisible: Starting scroll check for doc:', docId);
     
     const scrollableContainer = calendarRef.current.querySelector('.scrollable-grid') as HTMLElement;
     if (!scrollableContainer) {
@@ -259,9 +326,11 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     
     // If document not found, wait a bit for DOM to update (view transition)
     if (!selectedDocElement) {
+      console.log('Document element not found, retrying in 100ms...');
       setTimeout(() => {
         selectedDocElement = scrollableContainer.querySelector(`[data-doc-id="${docId}"]`) as HTMLElement;
         if (selectedDocElement) {
+          console.log('Document element found on retry, proceeding with scroll check');
           performScrollToKeepVisible(selectedDocElement, scrollableContainer);
         } else {
           console.warn(`Document element not found for ID: ${docId}`);
@@ -270,12 +339,100 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
       return;
     }
     
+    console.log('Document element found, proceeding with scroll check');
     performScrollToKeepVisible(selectedDocElement, scrollableContainer);
-  }, [isPreviewVisible, performScrollToKeepVisible]);
+  }, [performScrollToKeepVisible]);
 
 
   // SaaS Pattern: Viewport-based positioning (like Linear/Notion)
   // Only scroll if target is completely outside the viewport
+  // Helper functions for deterministic 2D scrolling
+  const getVerticalScrollParent = (el: HTMLElement | null): HTMLElement | null => {
+    let n: HTMLElement | null = el?.parentElement ?? null;
+    while (n) {
+      const cs = getComputedStyle(n);
+      const yScrollable = /(auto|scroll)/.test(cs.overflowY);
+      if (yScrollable) return n;
+      n = n.parentElement;
+    }
+    return null;
+  };
+
+  const waitForElement = async (selector: string, {
+    timeoutMs = 2000,
+    mustBeVisibleInDOM = true,
+  }: { timeoutMs?: number; mustBeVisibleInDOM?: boolean } = {}): Promise<HTMLElement | null> => {
+    const start = performance.now();
+    return new Promise(resolve => {
+      const tick = () => {
+        const el = document.querySelector<HTMLElement>(selector);
+        const ready =
+          el &&
+          (!mustBeVisibleInDOM || (el.offsetParent !== null && el.getBoundingClientRect().height > 0));
+        if (ready) return resolve(el!);
+        if (performance.now() - start > timeoutMs) return resolve(null);
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+  };
+
+  const clamp = (n: number, a: number, b: number) => { return Math.max(a, Math.min(b, n)); };
+
+  const computeTargetLeft = ({
+    hContainer, target, rightOcclusionPx = 0, margin = 12,
+  }: { hContainer: HTMLElement; target: HTMLElement; rightOcclusionPx?: number; margin?: number }): number => {
+    const c = hContainer.getBoundingClientRect();
+    const t = target.getBoundingClientRect();
+    const usableLeft = c.left + margin;
+    const usableRight = c.left + hContainer.clientWidth - rightOcclusionPx - margin;
+
+    let desiredLeft = hContainer.scrollLeft;
+    if (t.right > usableRight) desiredLeft += (t.right - usableRight);
+    else if (t.left < usableLeft) desiredLeft -= (usableLeft - t.left);
+
+    const maxLeft = Math.max(0, hContainer.scrollWidth - hContainer.clientWidth);
+    return clamp(Math.round(desiredLeft), 0, maxLeft);
+  };
+
+  const computeTargetTop = ({
+    vContainer, target, margin = 8,
+  }: { vContainer: HTMLElement; target: HTMLElement; margin?: number }): number => {
+    const c = vContainer.getBoundingClientRect();
+    const t = target.getBoundingClientRect();
+
+    let desiredTop = vContainer.scrollTop;
+    const topEdge = c.top + margin;
+    const bottomEdge = c.top + vContainer.clientHeight - margin;
+
+    if (t.bottom > bottomEdge) desiredTop += (t.bottom - bottomEdge);
+    else if (t.top < topEdge) desiredTop -= (topEdge - t.top);
+
+    const maxTop = Math.max(0, vContainer.scrollHeight - vContainer.clientHeight);
+    return clamp(Math.round(desiredTop), 0, maxTop);
+  };
+
+  const scrollIntoView2D = ({
+    hContainer, vContainer, target, rightOcclusionPx = 0, behavior = 'auto',
+  }: {
+    hContainer: HTMLElement;
+    vContainer: HTMLElement;
+    target: HTMLElement;
+    rightOcclusionPx?: number;
+    behavior?: ScrollBehavior;
+  }) => {
+    const left = computeTargetLeft({ hContainer, target, rightOcclusionPx });
+    const top = computeTargetTop({ vContainer, target });
+
+    console.log('Atomic 2D scroll:', { left, top, behavior, rightOcclusionPx });
+
+    requestAnimationFrame(() => {
+      // Start both simultaneously so animations don't fight
+      hContainer.scrollTo({ left, behavior });
+      vContainer.scrollTo({ top, behavior });
+    });
+  };
+
   const scrollToDate = useCallback((date: Date, forceScroll: boolean = false) => {
     if (!calendarRef.current) return;
     
@@ -299,9 +456,21 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     
     const targetElement = calendarRef.current.querySelector(targetSelector);
     
+    console.log('scrollToDate horizontal scroll check:', {
+      targetSelector,
+      targetElement: targetElement,
+      scale,
+      date: date.toISOString()
+    });
+    
     if (targetElement) {
       // Find the scrollable grid container
       let scrollableContainer = calendarRef.current.querySelector('.scrollable-grid');
+      
+      console.log('Scrollable container detection:', {
+        primary: scrollableContainer,
+        targetElement: targetElement
+      });
       
       if (!scrollableContainer) {
         // Fallback: look for any element with overflow-x: auto
@@ -336,6 +505,13 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
         const containerRect = scrollableContainer.getBoundingClientRect();
         const targetRect = targetElement.getBoundingClientRect();
         
+        console.log('Horizontal scroll calculation:', {
+          currentScrollLeft,
+          containerRect: { width: containerRect.width, left: containerRect.left },
+          targetRect: { width: targetRect.width, left: targetRect.left },
+          isPreviewVisible
+        });
+        
         // Calculate target position relative to container
         const targetLeft = targetRect.left - containerRect.left + currentScrollLeft;
         
@@ -349,6 +525,16 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
         const viewportRight = currentScrollLeft + availableWidth;
         
         const isTargetOutside = targetRight < viewportLeft || targetLeft > viewportRight;
+        
+        console.log('Horizontal scroll decision:', {
+          targetLeft,
+          targetRight,
+          viewportLeft,
+          viewportRight,
+          availableWidth,
+          isTargetOutside,
+          forceScroll
+        });
         
         // Only scroll if target is outside viewport or if forced
         if (isTargetOutside || forceScroll) {
@@ -400,15 +586,25 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scale, isPreviewVisible]); // Dependencies for useCallback
 
+  // Expose scrollToDate function through ref
+  useEffect(() => {
+    if (scrollToDateRef) {
+      scrollToDateRef.current = scrollToDate;
+    }
+  }, [scrollToDateRef, scrollToDate]);
+
   // Helper function to perform the actual minimap scroll calculation
   const performMinimapScroll = useCallback((targetColumn: HTMLElement, scrollableContainer: HTMLElement, containerRect: DOMRect, currentScrollLeft: number) => {
-    const columnRect = targetColumn.getBoundingClientRect();
     const previewPanelWidth = 620;
     const availableWidth = isPreviewVisible ? containerRect.width - previewPanelWidth : containerRect.width;
     
-    // Calculate target position relative to container
-    const columnLeft = columnRect.left - containerRect.left + currentScrollLeft;
-    const columnRight = columnLeft + columnRect.width;
+    // Get the column's position within the scrollable content
+    const columnOffsetLeft = targetColumn.offsetLeft;
+    const columnWidth = targetColumn.offsetWidth;
+    
+    // Calculate the column's position relative to the current scroll position
+    const columnLeft = columnOffsetLeft - currentScrollLeft;
+    const columnRight = columnLeft + columnWidth;
     
     // Determine if we need to scroll
     const isColumnVisible = columnLeft >= 0 && columnRight <= availableWidth;
@@ -422,14 +618,14 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     let targetScrollLeft;
     
     if (columnLeft < 0) {
-      // Column is to the left, scroll to show it at the start
-      targetScrollLeft = columnLeft - 20; // Small margin
+      // Column is to the left, scroll to show it at the start with margin
+      targetScrollLeft = columnOffsetLeft - 20; // Small margin from left edge
     } else if (columnRight > availableWidth) {
-      // Column is to the right, scroll to show it at the end
-      targetScrollLeft = columnRight - availableWidth + 20; // Small margin
+      // Column is to the right, scroll to show it at the end with margin
+      targetScrollLeft = columnOffsetLeft + columnWidth - availableWidth + 20; // Small margin from right edge
     } else {
       // Column is partially visible, position it optimally
-      targetScrollLeft = columnLeft - (availableWidth * 0.2); // 20% from left edge
+      targetScrollLeft = columnOffsetLeft - (availableWidth * 0.2); // 20% from left edge
     }
     
     // Ensure we don't scroll beyond bounds
@@ -500,36 +696,60 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     };
   }, []);
 
-  // SaaS Pattern: Scroll preservation - never reset scroll position when selecting documents
-  // Only update date context without triggering scroll animations
+  // Track previous timeframe values to detect changes
+  // const prevTimeframeRef = useRef({ year: currentYear, month: currentMonth, day: currentDay });
+
+  // Deterministic 2D scrolling after timeframe changes
   useEffect(() => {
-    if (selectedDocId && docs.length > 0 && !isManualNavigationRef.current) {
-      const selectedDoc = docs.find(doc => doc.id === selectedDocId);
-      if (selectedDoc) {
-        const docDate = new Date(selectedDoc.date);
-        
-        // Update current year/month/day to match the selected document
-        const newYear = docDate.getFullYear();
-        const newMonth = docDate.getMonth();
-        const newDay = docDate.getDate();
-        
-        setCurrentYear(newYear);
-        setCurrentMonth(newMonth);
-        setCurrentDay(newDay);
-        
-        // Notify parent components of the date change
-        onYearChange?.(newYear);
-        onMonthChange?.(newMonth);
-        onDayChange?.(newDay);
-        
-        // Smart scrolling: Only scroll if document is not visible
-        // This brings documents into view when needed without jarring resets
-        setTimeout(() => {
-          scrollToKeepDocumentVisible(selectedDocId);
-        }, 100); // Small delay to ensure DOM has updated
+    if (!selectedDocId || isManualNavigationRef.current) return;
+
+    console.log('Deterministic 2D scroll effect triggered for:', selectedDocId);
+
+    // Wait until the new view actually renders the selected item
+    (async () => {
+      // Ensure horizontal container exists
+      const hContainer = calendarRef.current?.querySelector<HTMLElement>('.scrollable-grid');
+      if (!hContainer) {
+        console.log('No horizontal container found');
+        return;
       }
-    }
-  }, [scale, selectedDocId, docs, onYearChange, onMonthChange, onDayChange, isManualNavigationRef, scrollToKeepDocumentVisible]);
+
+      console.log('Horizontal container found:', hContainer);
+
+      // Wait for the selected item in the new view DOM
+      const target = await waitForElement(`[data-doc-id="${selectedDocId}"]`);
+      if (!target) {
+        console.log('Selected item not found after waiting');
+        return;
+      }
+
+      console.log('Selected item found:', target);
+
+      // Find the correct vertical container for THIS item (column list)
+      const vContainer = getVerticalScrollParent(target);
+      if (!vContainer) {
+        console.log('No vertical container found for selected item');
+        return;
+      }
+
+      console.log('Vertical container found:', vContainer);
+
+      // If a preview panel is visible, subtract its width from usable right
+      const panel = document.querySelector<HTMLElement>('[data-preview-panel]');
+      const rightOcclusionPx = panel ? panel.getBoundingClientRect().width : 0;
+
+      console.log('Preview panel occlusion:', rightOcclusionPx);
+
+      // First pass: 'auto' to land deterministically on first paint
+      scrollIntoView2D({ hContainer, vContainer, target, rightOcclusionPx, behavior: 'auto' });
+
+      // Optional: tiny smooth nudge after fonts/row-heights settle
+      setTimeout(() => {
+        scrollIntoView2D({ hContainer, vContainer, target, rightOcclusionPx, behavior: 'smooth' });
+      }, 40);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scale, selectedDocId]);
 
 
   const handleDocSelect = (doc: Doc) => {
@@ -559,6 +779,12 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     setCurrentYear(date.getFullYear());
     setCurrentMonth(date.getMonth());
     
+    // Trigger highlighting for the clicked date
+    onHighlightedDate?.(date);
+    setTimeout(() => {
+      onHighlightedDate?.(null); // Clear highlight after timeout
+    }, 2000); // 2000ms highlight duration
+    
     // Scroll to the corresponding time period
     scrollToDate(date);
     onScrub?.(date);
@@ -584,6 +810,8 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
 
   const scrollToFirstDocumentInYear = (year: number, month?: number) => {
     if (!calendarRef.current) return;
+    
+    console.log('scrollToFirstDocumentInYear called:', { year, month, scale });
     
     // If month is specified, scroll to that specific month within the year
     if (month !== undefined) {
@@ -613,6 +841,7 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
             const isHeaderVisible = headerRect.top >= containerRect.top && headerRect.bottom <= containerRect.bottom;
             
             if (!isHeaderVisible) {
+              console.log('Scrolling to month header:', monthHeader);
               monthHeader.scrollIntoView({ 
                 behavior: 'auto', 
                 block: 'start', // Scroll to show month header at top
@@ -633,6 +862,7 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
               const isDocVisible = docRect.top >= containerRect.top && docRect.bottom <= containerRect.bottom;
               
               if (!isDocVisible) {
+                console.log('Scrolling to document element:', docElement);
                 docElement.scrollIntoView({ 
                   behavior: 'auto', 
                   block: 'start',
@@ -684,6 +914,7 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
       const documentList = docElement.closest('.DocumentList');
       if (documentList) {
         // Scroll the DocumentList to show the document
+        console.log('Scrolling DocumentList to show document:', docElement);
         docElement.scrollIntoView({ 
           behavior: 'auto', 
           block: 'start', // Scroll to top of the document
@@ -691,6 +922,7 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
         });
       } else {
         // Fallback to regular scrollIntoView
+        console.log('DocumentList not found, falling back to regular scrollIntoView for document:', docElement);
         docElement.scrollIntoView({ 
           behavior: 'auto', 
           block: 'start',
@@ -805,6 +1037,7 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
         console.log(`Navigate ${direction}`);
       },
       highlightedMonth,
+      highlightedDate,
       currentYear,
       currentMonth,
       currentDay
@@ -837,6 +1070,14 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
           onYearClick={(year) => {
             isManualNavigationRef.current = true;
             setCurrentYear(year);
+            
+            // Trigger highlighting for the clicked year (January 1st of that year)
+            const highlightDate = new Date(year, 0, 1);
+            onHighlightedDate?.(highlightDate);
+            setTimeout(() => {
+              onHighlightedDate?.(null); // Clear highlight after timeout
+            }, 2000); // 2000ms highlight duration
+            
             // Scroll to the year column with smart scrolling
             const targetDate = new Date(year, 0, 1); // January 1st of the target year
             scrollToColumnWithSmartScroll(targetDate, `[data-year="${year}"]`);
@@ -849,6 +1090,14 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
           onMonthClick={(month) => {
             isManualNavigationRef.current = true;
             setCurrentMonth(month);
+            
+            // Trigger highlighting for the clicked month (1st day of that month)
+            const highlightDate = new Date(currentYear, month, 1);
+            onHighlightedDate?.(highlightDate);
+            setTimeout(() => {
+              onHighlightedDate?.(null); // Clear highlight after timeout
+            }, 2000); // 2000ms highlight duration
+            
             // Scroll to the month column with smart scrolling
             const targetDate = new Date(currentYear, month, 1);
             scrollToColumnWithSmartScroll(targetDate, `[data-month="${month}"]`);
@@ -861,6 +1110,14 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
           onDayClick={(day) => {
             isManualNavigationRef.current = true;
             setCurrentDay(day);
+            
+            // Trigger highlighting for the clicked day
+            const highlightDate = new Date(currentYear, currentMonth, day);
+            onHighlightedDate?.(highlightDate);
+            setTimeout(() => {
+              onHighlightedDate?.(null); // Clear highlight after timeout
+            }, 2000); // 2000ms highlight duration
+            
             // Scroll to the day column with smart scrolling
             const targetDate = new Date(currentYear, currentMonth, day);
             scrollToColumnWithSmartScroll(targetDate, `[data-day="${day}"]`);

@@ -365,7 +365,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
             {document.title}
           </DocumentTitle>
           <CloseButton onClick={onClose}>
-            ×
+            <img src="/close.svg" alt="Close" width="16" height="16" />
           </CloseButton>
         </HeaderRow>
         

@@ -1,17 +1,18 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import styled from 'styled-components';
+import { createPortal } from 'react-dom';
 import { Doc } from '../types/Timeline';
 
-const DatePickerContainer = styled.div`
-  position: absolute;
-  top: 100%;
-  left: 0;
+const DatePickerContainer = styled.div<{ top: number; left: number }>`
+  position: fixed;
+  top: ${props => props.top}px;
+  left: ${props => props.left}px;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   padding: 16px;
-  z-index: 9999;
+  z-index: 50006; /* Above document preview panel (z-index: 50005) */
   min-width: 280px;
 `;
 
@@ -22,11 +23,49 @@ const DatePickerHeader = styled.div`
   margin-bottom: 16px;
 `;
 
-const MonthYearDisplay = styled.div`
-  font-size: 16px;
+const DropdownContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+`;
+
+const YearDropdown = styled.select`
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
   font-weight: 600;
   color: #1f2937;
   cursor: pointer;
+  
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  }
+`;
+
+const MonthDropdown = styled.select`
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  }
+`;
+
+const MonthOption = styled.option<{ hasDocuments: boolean }>`
+  font-weight: ${props => props.hasDocuments ? '600' : '400'};
+  color: ${props => props.hasDocuments ? '#1f2937' : '#6b7280'};
 `;
 
 const NavigationButton = styled.button`
@@ -79,22 +118,22 @@ const DateButton = styled.button<{
   hasDocuments: boolean;
   isToday?: boolean;
 }>`
-  background: ${props => props.isSelected ? '#3b82f6' : 'transparent'};
+  background: transparent;
   border: none;
   border-radius: 6px;
   padding: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: ${props => props.hasDocuments ? '600' : '400'}; // Only font weight difference
   cursor: pointer;
   color: ${props => {
-    if (props.isSelected) return 'white';
     if (!props.isCurrentMonth) return '#9ca3af';
-    if (props.hasDocuments) return '#1f2937'; // Primary color for dates with documents
-    return '#6b7280'; // Secondary color for dates without documents
+    if (props.hasDocuments) return '#1f2937'; // Primary color
+    return '#6b7280'; // Secondary color
   }};
+  transition: all 0.2s ease;
   
   &:hover {
-    background: ${props => props.isSelected ? '#3b82f6' : '#f3f4f6'};
+    background: #f3f4f6;
   }
   
   &:disabled {
@@ -113,6 +152,8 @@ interface DatePickerProps {
   onDateSelect: (date: Date) => void;
   onClose: () => void;
   isVisible: boolean;
+  triggerRef?: React.RefObject<HTMLElement | null>;
+  highlightedDate?: Date | null;
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({
@@ -120,10 +161,83 @@ const DatePicker: React.FC<DatePickerProps> = ({
   docs,
   onDateSelect,
   onClose,
-  isVisible
+  isVisible,
+  triggerRef,
+  highlightedDate
 }) => {
   const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
   const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  // Debug: Log when component mounts/unmounts
+  useEffect(() => {
+    console.log('DatePicker mounted/updated, isVisible:', isVisible);
+    return () => {
+      console.log('DatePicker unmounting');
+    };
+  }, [isVisible]);
+
+  // Sync internal state with selectedDate prop
+  useEffect(() => {
+    console.log('DatePicker selectedDate changed:', selectedDate);
+    setCurrentMonth(selectedDate.getMonth());
+    setCurrentYear(selectedDate.getFullYear());
+  }, [selectedDate]);
+
+  // Calculate position based on trigger element
+  useEffect(() => {
+    if (isVisible && triggerRef?.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 8, // Position below the trigger element
+        left: rect.left // Align with left edge of trigger
+      });
+    }
+  }, [isVisible, triggerRef]);
+
+  // Close on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        console.log('ESC key pressed - closing DatePicker');
+        onClose();
+      }
+    };
+
+    if (isVisible) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isVisible, onClose]);
+
+  // Close on click outside - DISABLED for now to fix usability
+  // useEffect(() => {
+  //   const handleClickOutside = (e: MouseEvent) => {
+  //     // Get the DatePicker element
+  //     const datePickerElement = document.querySelector('[data-datepicker-container]');
+      
+  //     // Check if click is inside DatePicker or trigger
+  //     const isInsideDatePicker = datePickerElement && datePickerElement.contains(e.target as Node);
+  //     const isInsideTrigger = triggerRef?.current && triggerRef.current.contains(e.target as Node);
+      
+  //     // Only close if click is outside both
+  //     if (!isInsideDatePicker && !isInsideTrigger) {
+  //       onClose();
+  //     }
+  //   };
+
+  //   if (isVisible) {
+  //     // Use a small delay to prevent immediate closing
+  //     const timeoutId = setTimeout(() => {
+  //       document.addEventListener('mousedown', handleClickOutside);
+  //     }, 100);
+      
+  //     return () => {
+  //       clearTimeout(timeoutId);
+  //       document.removeEventListener('mousedown', handleClickOutside);
+  //     };
+  //   }
+  // }, [isVisible, onClose, triggerRef]);
 
   // Get date range from documents
   const dateRange = useMemo(() => {
@@ -153,7 +267,29 @@ const DatePicker: React.FC<DatePickerProps> = ({
            targetDate <= new Date(dateRange.max.getFullYear(), dateRange.max.getMonth(), 1);
   };
 
+  // Check if a month has documents
+  const monthHasDocuments = useCallback((year: number, month: number) => {
+    return docs.some(doc => {
+      const docDate = new Date(doc.date);
+      return docDate.getFullYear() === year && docDate.getMonth() === month;
+    });
+  }, [docs]);
+
+  // Get available years from documents
+  const availableYears = useMemo(() => {
+    const years = Array.from(new Set(docs.map(doc => new Date(doc.date).getFullYear())))
+      .sort((a, b) => a - b);
+    return years;
+  }, [docs]);
+
+  const handleDateClick = (date: Date) => {
+    console.log('Date clicked:', date);
+    onDateSelect(date);
+    onClose();
+  };
+
   const handlePrevMonth = () => {
+    console.log('Previous month clicked');
     let newYear = currentYear;
     let newMonth = currentMonth - 1;
     
@@ -169,6 +305,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const handleNextMonth = () => {
+    console.log('Next month clicked');
     let newYear = currentYear;
     let newMonth = currentMonth + 1;
     
@@ -183,9 +320,18 @@ const DatePicker: React.FC<DatePickerProps> = ({
     }
   };
 
-  const handleDateClick = (date: Date) => {
-    onDateSelect(date);
-    onClose();
+  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newYear = parseInt(e.target.value);
+    if (canNavigateToMonth(newYear, currentMonth)) {
+      setCurrentYear(newYear);
+    }
+  };
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newMonth = parseInt(e.target.value);
+    if (canNavigateToMonth(currentYear, newMonth)) {
+      setCurrentMonth(newMonth);
+    }
   };
 
   // Generate calendar days
@@ -239,12 +385,27 @@ const DatePicker: React.FC<DatePickerProps> = ({
 
   if (!isVisible) return null;
 
-  return (
-    <DatePickerContainer>
+  return createPortal(
+    <DatePickerContainer top={position.top} left={position.left} data-datepicker-container>
       <DatePickerHeader>
-        <MonthYearDisplay>
-          {monthNames[currentMonth]} {currentYear}
-        </MonthYearDisplay>
+        <DropdownContainer>
+          <YearDropdown value={currentYear} onChange={handleYearChange}>
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </YearDropdown>
+          <MonthDropdown value={currentMonth} onChange={handleMonthChange}>
+            {monthNames.map((month, index) => (
+              <MonthOption 
+                key={index} 
+                value={index}
+                hasDocuments={monthHasDocuments(currentYear, index)}
+              >
+                {month}
+              </MonthOption>
+            ))}
+          </MonthDropdown>
+        </DropdownContainer>
         <div style={{ display: 'flex', gap: '4px' }}>
           <NavigationButton 
             onClick={handlePrevMonth}
@@ -292,7 +453,8 @@ const DatePicker: React.FC<DatePickerProps> = ({
           );
         })}
       </DateGrid>
-    </DatePickerContainer>
+    </DatePickerContainer>,
+    document.body
   );
 };
 

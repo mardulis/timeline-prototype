@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Doc } from '../types/Timeline';
 
-const MinimapContainer = styled.div`
+const MinimapContainer = styled.div<{ rightPadding: number }>`
   background: #FFFFFF;
-  padding: 16px 32px; /* Increased right padding from 24px to 32px */
+  padding: 16px ${props => props.rightPadding}px 16px 24px; /* Dynamic right padding, 24px left padding */
   width: 100%;
   overflow: visible; /* Allow content to extend beyond container bounds */
   min-width: 0; /* Allow container to shrink */
@@ -147,6 +147,17 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
   });
   
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+
+  // Add resize listener to track viewport width changes
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   // Generate daily data for the current month only, including invisible bars for empty days
   const dailyData = useMemo(() => {
     const days: Array<{
@@ -195,17 +206,17 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
     
     // Calculate available width considering preview panel visibility
     let availableWidth;
+    const rightPadding = 48; // Increased right padding for Day view
+    
     if (isPreviewVisible) {
       // When preview panel is visible, scale to available width to the left of preview panel
-      const viewportWidth = window.innerWidth;
       const sidebarWidth = 64; // Left sidebar width
       const previewPanelWidth = 620; // Preview panel width
-      availableWidth = viewportWidth - sidebarWidth - previewPanelWidth - leftPadding - 32; // 32px right padding
+      availableWidth = viewportWidth - sidebarWidth - previewPanelWidth - leftPadding - rightPadding;
     } else {
-      // When preview panel is not visible, span whole viewport width with 32px right padding
-      const viewportWidth = window.innerWidth;
+      // When preview panel is not visible, span whole viewport width with increased right padding
       const sidebarWidth = 64; // Left sidebar width
-      availableWidth = viewportWidth - sidebarWidth - leftPadding - 32; // 32px right padding
+      availableWidth = viewportWidth - sidebarWidth - leftPadding - rightPadding;
     }
     
     // Calculate spacing: ensure all days fit in available width
@@ -224,7 +235,7 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
         position: position // Position for blue dot
       };
     });
-  }, [dailyData, maxCount, isPreviewVisible, currentYear, currentMonth]);
+  }, [dailyData, maxCount, isPreviewVisible, currentYear, currentMonth, viewportWidth]);
 
   // Calculate blue dot position for selected document
   const blueDotPosition = useMemo(() => {
@@ -289,8 +300,10 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
     setTooltip(prev => ({ ...prev, visible: false }));
   };
 
+  const rightPadding = 48; // Increased right padding for Day view
+
   return (
-    <MinimapContainer data-minimap-container>
+    <MinimapContainer data-minimap-container rightPadding={rightPadding}>
       <MinimapWrapper>
         <Baseline />
         {dailyDataWithHeights.map((data, index) => (

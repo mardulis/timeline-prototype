@@ -5,8 +5,10 @@ import TopPanel from './TopPanel';
 import SearchAndControls from './SearchAndControls';
 import CalendarArea from './CalendarArea';
 import DocumentPreview from './DocumentPreview';
+import CSVErrorState from './CSVErrorState';
+import CSVLoadingState from './CSVLoadingState';
 import { TimeScale, Mode, Doc, DocumentPreviewData } from '../types/Timeline';
-import { loadCSVDocuments } from '../utils/csvParser';
+import { loadCSVDocuments, parseCSV } from '../utils/csvParser';
 
 const DashboardContainer = styled.div`
   display: flex;
@@ -27,9 +29,9 @@ const MainContentArea = styled.div`
 const TopSection = styled.div`
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 50004; /* Higher z-index to ensure date picker is above all elements */
   background: white;
-  overflow: hidden; /* Prevent horizontal scrolling in top section */
+  overflow: visible; /* Allow date picker to be visible */
 `;
 
 const ContentRow = styled.div`
@@ -58,7 +60,7 @@ const DocumentPreviewPanel = styled.div<{ isVisible: boolean }>`
   position: fixed;
   top: 120px; /* Position top border at 120px from top of page */
   right: 0;
-  z-index: 35; /* Above column headers (z-index: 30) and minimap (z-index: 20) */
+  z-index: 50005; /* Above everything including top panel and date picker */
   transform: ${props => props.isVisible ? 'translateX(0)' : 'translateX(100%)'};
   transition: transform 300ms ease-in-out;
 `;
@@ -86,9 +88,13 @@ const TimelineDashboard: React.FC = () => {
   const [currentYear, setCurrentYear] = useState(2021);
   const [currentMonth, setCurrentMonth] = useState(0);
   const [currentDay, setCurrentDay] = useState(1);
+  const [highlightedDate, setHighlightedDate] = useState<Date | null>(null);
   const [range, setRange] = useState({ start: new Date(2018, 0, 1), end: new Date(2025, 11, 31) });
   const [docs, setDocs] = useState<Doc[]>([]);
+  const [isLoadingCSV, setIsLoadingCSV] = useState(false);
+  const [csvError, setCsvError] = useState<string | null>(null);
   const manualNavigationRef = useRef(false);
+  const scrollToDateRef = useRef<((date: Date) => void) | null>(null);
 
   // Load CSV data on component mount
   useEffect(() => {
@@ -122,6 +128,69 @@ const TimelineDashboard: React.FC = () => {
     selectedDoc ? convertDocToPreviewData(selectedDoc) : null, 
     [selectedDoc]
   );
+
+  const handleLoadCSV = async (file: File) => {
+    setIsLoadingCSV(true);
+    setCsvError(null);
+    
+    try {
+      const text = await file.text();
+      const csvDocs = parseCSV(text);
+      
+      if (csvDocs.length === 0) {
+        throw new Error('No valid data found in CSV file');
+      }
+      
+      setDocs(csvDocs);
+      
+      // Update range based on actual data
+      const dates = csvDocs.map(doc => new Date(doc.date));
+      const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+      const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+      setRange({ start: minDate, end: maxDate });
+      
+      // Set current year to the most recent year with data
+      const maxYear = maxDate.getFullYear();
+      setCurrentYear(maxYear);
+      
+      // Clear any selected document
+      setSelectedDoc(null);
+      
+    } catch (error) {
+      console.error('Failed to load CSV:', error);
+      setCsvError(error instanceof Error ? error.message : 'Failed to load CSV file');
+    } finally {
+      setIsLoadingCSV(false);
+    }
+  };
+
+  const handleRefreshCSV = () => {
+    setCsvError(null);
+    // Reload the default CSV data
+    const loadData = async () => {
+      try {
+        const csvDocs = await loadCSVDocuments();
+        setDocs(csvDocs);
+        
+        // Update range based on actual data
+        if (csvDocs.length > 0) {
+          const dates = csvDocs.map(doc => new Date(doc.date));
+          const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+          const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+          setRange({ start: minDate, end: maxDate });
+          
+          // Set current year to the most recent year with data
+          const maxYear = maxDate.getFullYear();
+          setCurrentYear(maxYear);
+        }
+      } catch (error) {
+        console.error('Failed to load CSV data:', error);
+        setCsvError('Failed to load default data');
+      }
+    };
+
+    loadData();
+  };
 
   const handleScaleChange = (newScale: TimeScale) => {
     setScale(newScale);
@@ -208,13 +277,17 @@ const TimelineDashboard: React.FC = () => {
     }, 100);
   };
 
+  const handleHighlightedDate = (date: Date | null) => {
+    setHighlightedDate(date);
+  };
+
   return (
     <DashboardContainer>
       <LeftSidebar />
       
       <MainContentArea>
         <TopSection>
-          <TopPanel mode={mode} onModeChange={handleModeChange} />
+          <TopPanel mode={mode} onModeChange={handleModeChange} onLoadCSV={handleLoadCSV} />
           <SearchAndControls
             scale={scale}
             onScaleChange={handleScaleChange}
@@ -228,34 +301,45 @@ const TimelineDashboard: React.FC = () => {
             currentMonth={currentMonth}
             currentDay={currentDay}
             onManualNavigationStart={handleManualNavigationStart}
+            onHighlightedDate={handleHighlightedDate}
+            scrollToDateRef={scrollToDateRef}
           />
         </TopSection>
         
         <ContentRow>
           <CalendarWrapper>
-        <CalendarArea
-          scale={scale}
-          mode={mode}
-          range={range}
-          docs={docs}
-          selectedDocId={selectedDoc?.id}
-          onScaleChange={handleScaleChange}
-          onModeChange={handleModeChange}
-          onScrub={handleScrub}
-          onSelect={handleDocSelect}
-          isPreviewVisible={!!selectedDoc}
-          currentYear={currentYear}
-          currentMonth={currentMonth}
-          currentDay={currentDay}
-          onYearChange={handleYearChange}
-          onMonthChange={handleMonthChange}
-          onDayChange={handleDayChange}
-          onManualNavigationStart={handleManualNavigationStart}
-          manualNavigationRef={manualNavigationRef}
-        />
+            {isLoadingCSV ? (
+              <CSVLoadingState />
+            ) : csvError ? (
+              <CSVErrorState error={csvError} onRefresh={handleRefreshCSV} />
+            ) : (
+              <CalendarArea
+                scale={scale}
+                mode={mode}
+                range={range}
+                docs={docs}
+                selectedDocId={selectedDoc?.id}
+                onScaleChange={handleScaleChange}
+                onModeChange={handleModeChange}
+                onScrub={handleScrub}
+                onSelect={handleDocSelect}
+                isPreviewVisible={!!selectedDoc}
+                currentYear={currentYear}
+                currentMonth={currentMonth}
+                currentDay={currentDay}
+                highlightedDate={highlightedDate}
+                onYearChange={handleYearChange}
+                onMonthChange={handleMonthChange}
+                onDayChange={handleDayChange}
+                onManualNavigationStart={handleManualNavigationStart}
+                manualNavigationRef={manualNavigationRef}
+                scrollToDateRef={scrollToDateRef}
+                onHighlightedDate={handleHighlightedDate}
+              />
+            )}
           </CalendarWrapper>
           
-          <DocumentPreviewPanel isVisible={!!selectedDoc}>
+          <DocumentPreviewPanel isVisible={!!selectedDoc} data-preview-panel>
             <DocumentPreview
               document={previewData}
               onClose={handleClosePreview}

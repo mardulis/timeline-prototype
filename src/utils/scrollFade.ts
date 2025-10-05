@@ -1,43 +1,43 @@
-/* === JS: Toggle classes based on scroll position === */
+/* =========================
+   JS: Toggle state classes
+   ========================= */
 
-const EPS = 1; // tolerance for bottom detection
+const EPS = 1;
 
-function updateFade(el: HTMLElement) {
-  const { scrollTop, scrollHeight, clientHeight } = el;
+function updateFade(container: HTMLElement) {
+  const { scrollTop, scrollHeight, clientHeight } = container;
   const hasOverflow = scrollHeight > clientHeight + EPS;
-  el.classList.toggle("has-overflow", hasOverflow);
+
+  container.classList.toggle('has-overflow', hasOverflow);
 
   if (!hasOverflow) {
-    el.classList.remove("at-top", "at-bottom");
+    container.classList.remove('at-top', 'at-bottom');
     return;
   }
-  el.classList.toggle("at-top", scrollTop <= EPS);
-  el.classList.toggle("at-bottom", scrollTop + clientHeight >= scrollHeight - EPS);
+
+  container.classList.toggle('at-top', scrollTop <= EPS);
+  container.classList.toggle('at-bottom', scrollTop + clientHeight >= scrollHeight - EPS);
 }
 
-function initScrollFade(el: HTMLElement) {
-  // initial state
-  updateFade(el);
+function init(container: Element) {
+  const inner = container.querySelector('.scroll-inner') || container;
+  updateFade(container as HTMLElement);
 
-  // update on scroll & resize
-  el.addEventListener("scroll", () => updateFade(el), { passive: true });
-  
-  const ro = new ResizeObserver(() => updateFade(el));
-  ro.observe(el);
+  container.addEventListener('scroll', () => updateFade(container as HTMLElement), { passive: true });
 
-  // If content mutates dynamically
-  const mo = new MutationObserver(() => updateFade(el));
-  mo.observe(el, { childList: true, subtree: true });
+  const ro = new ResizeObserver(() => updateFade(container as HTMLElement));
+  ro.observe(container);
+  ro.observe(inner);
+
+  const mo = new MutationObserver(() => updateFade(container as HTMLElement));
+  mo.observe(inner, { childList: true, subtree: true });
 }
 
 export function initializeScrollFade() {
-  // Initialize all scroll-fade columns
-  document.querySelectorAll(".scroll-fade").forEach((el) => {
-    initScrollFade(el as HTMLElement);
-  });
+  document.querySelectorAll('.scroll-fade').forEach(init);
 }
 
 export function addScrollFadeToElement(element: HTMLElement) {
-  element.classList.add("scroll-fade");
-  initScrollFade(element);
+  element.classList.add('scroll-fade');
+  init(element);
 }

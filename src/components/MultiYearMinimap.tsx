@@ -2,6 +2,135 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { Doc } from '../types/Timeline';
 
+// Minimap label computation constants
+const LABEL_MIN_PX = 30; // Reduced from 50 to allow more labels when space is available
+const LABEL_GAP_PX = 6; // Reduced from 12 to allow more labels when space is available
+
+// Helper function to compute "nice" step values
+function niceStep(n: number): number {
+  if (n <= 1) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(n)));
+  const cands = [1, 2, 5].map(m => m * pow);
+  for (const c of cands) if (c >= n) return c;
+  return 10 * pow;
+}
+
+// Main function to compute year labels with collision detection
+function computeYearLabels({
+  y0, y1, widthPx, yearToX, measureText,
+  labelMinPx = LABEL_MIN_PX, labelGapPx = LABEL_GAP_PX
+}: {
+  y0: number;
+  y1: number;
+  widthPx: number;
+  yearToX: (y: number) => number;
+  measureText: (s: string) => number;
+  labelMinPx?: number;
+  labelGapPx?: number;
+}): number[] {
+  const totalYears = Math.max(1, (y1 - y0 + 1));
+  const pxPerYear = widthPx / totalYears;
+  
+  // First, try to fit all years with minimum spacing
+  const allYears = [];
+  for (let year = y0; year <= y1; year++) {
+    allYears.push(year);
+  }
+  
+  // Check if all years fit with proper spacing
+  let lastRight = -Infinity;
+  const allFit = allYears.every(year => {
+    const x = yearToX(year);
+    const w = measureText(String(year));
+    if (x >= lastRight + labelGapPx) {
+      lastRight = x + w;
+      return true;
+    }
+    return false;
+  });
+  
+  // If all years fit, return them all
+  if (allFit) {
+    return allYears;
+  }
+  
+  // Otherwise, use the step-based algorithm for tight spacing
+  const rawStepYears = Math.max(1, Math.ceil(labelMinPx / Math.max(1e-6, pxPerYear)));
+  const step = niceStep(rawStepYears);
+
+  const start = Math.ceil(y0 / step) * step;
+  const candidates = new Set<number>();
+  for (let y = start; y <= y1; y += step) candidates.add(y);
+  candidates.add(y0);
+  candidates.add(y1);
+
+  const candList = Array.from(candidates).sort((a, b) => a - b);
+  lastRight = -Infinity;
+  const kept: number[] = [];
+
+  // First pass: add all candidates that fit with proper spacing
+  for (const y of candList) {
+    const x = yearToX(y);
+    const w = measureText(String(y));
+    if (x >= lastRight + labelGapPx) {
+      kept.push(y);
+      lastRight = x + w;
+    }
+  }
+
+  // Second pass: ensure endpoints are included, removing conflicting years if necessary
+  // Priority: y0 (first year) and y1 (last year) are most important
+  
+  // Ensure y0 is included
+  if (!kept.includes(y0)) {
+    const y0X = yearToX(y0);
+    const y0W = measureText(String(y0));
+    
+    // Find years that conflict with y0 - check both sides
+    const conflictingWithY0 = kept.filter(y => {
+      const yX = yearToX(y);
+      const yW = measureText(String(y));
+      
+      // Check if labels overlap or are too close
+      // y0 is to the left, so check if any label is too close on the right
+      return (y0X + y0W + labelGapPx > yX) && (y0X < yX + yW + labelGapPx);
+    });
+    
+    // Remove conflicting years and add y0
+    if (conflictingWithY0.length > 0) {
+      kept.splice(0, conflictingWithY0.length);
+    }
+    // Always add y0, regardless of conflicts
+    kept.unshift(y0);
+  }
+  
+  // Ensure y1 is included (highest priority)
+  if (!kept.includes(y1)) {
+    const y1X = yearToX(y1);
+    const y1W = measureText(String(y1));
+    
+    // Find years that conflict with y1 - check both sides
+    const conflictingWithY1 = kept.filter(y => {
+      const yX = yearToX(y);
+      const yW = measureText(String(y));
+      
+      // Check if labels overlap or are too close
+      // y1 is to the right, so check if any label is too close on the left
+      return (yX + yW + labelGapPx > y1X) && (yX < y1X + y1W + labelGapPx);
+    });
+    
+    // Remove conflicting years and add y1
+    if (conflictingWithY1.length > 0) {
+      // Remove from the end to prioritize y1
+      kept.splice(kept.length - conflictingWithY1.length, conflictingWithY1.length);
+    }
+    // Always add y1, regardless of conflicts
+    kept.push(y1);
+  }
+
+  return Array.from(new Set(kept)).sort((a, b) => a - b);
+}
+
 const MinimapContainer = styled.div`
   background: #FFFFFF;
   padding: 16px 24px; /* 24px padding on left and right */
@@ -110,6 +239,7 @@ const YearLabel = styled.div<{ position: number; hasData?: boolean }>`
   left: ${props => props.position}px;
   transform: translateX(-50%);
   font-size: 12px;
+  font-weight: ${props => props.hasData ? '600' : '400'}; /* Strong font weight for years with documents */
   color: ${props => props.hasData ? '#1f2937' : '#6b7280'};
   white-space: nowrap;
   cursor: pointer;
@@ -166,32 +296,30 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
   });
   
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Measure container width and add resize listener
+  // Track viewport width changes
   useEffect(() => {
-    const updateWidth = () => {
-      // Container width measurement removed as it's not used
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
     };
 
-    // Initial measurement
-    updateWidth();
-
-    // Add resize listener
-    window.addEventListener('resize', updateWidth);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', updateWidth);
-    };
-  }, [isPreviewVisible]); // Re-measure when preview visibility changes
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Generate monthly data for each year, including invisible bars for empty months
   const monthlyData = useMemo(() => {
     const months = [];
     
-    // Generate all months from 2018 to 2025
-    for (let year = 2018; year <= 2025; year++) {
+    // Calculate the actual year range from the documents
+    const years = docs.map(doc => new Date(doc.date).getFullYear());
+    const minYear = years.length > 0 ? Math.min(...years) : 2021;
+    const maxYear = years.length > 0 ? Math.max(...years) : 2021;
+    
+    // Generate all months for the actual year range
+    for (let year = minYear; year <= maxYear; year++) {
       for (let month = 0; month < 12; month++) {
         const monthDocs = docs.filter(doc => {
           const docDate = new Date(doc.date);
@@ -220,8 +348,12 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
   const monthlyDataWithHeights = useMemo(() => {
     const barWidth = 4; // Fixed 4px width for each bar
     const barsPerYear = 12; // 12 months per year
-    const totalYears = 8; // 2018-2025
-    const totalBars = totalYears * barsPerYear; // Total number of bars (96)
+    // Calculate the actual year range from the documents
+    const years = docs.map(doc => new Date(doc.date).getFullYear());
+    const minYear = years.length > 0 ? Math.min(...years) : 2021;
+    const maxYear = years.length > 0 ? Math.max(...years) : 2021;
+    const totalYears = maxYear - minYear + 1; // Dynamic total years
+    const totalBars = totalYears * barsPerYear; // Total number of bars
     
     return monthlyData.map((data, index) => {
       // Use the actual measured container width for dynamic calculation
@@ -233,12 +365,10 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
       let availableWidth;
       if (isPreviewVisible) {
         // When preview panel is visible, scale to available width to the left of preview panel
-        const viewportWidth = window.innerWidth;
         const previewPanelWidth = 620; // Preview panel width
         availableWidth = viewportWidth - sidebarWidth - previewPanelWidth - leftPadding - 24; // 24px right padding
       } else {
         // When preview panel is not visible, span whole viewport width with 24px right padding
-        const viewportWidth = window.innerWidth;
         availableWidth = viewportWidth - sidebarWidth - leftPadding - 24; // 24px right padding
       }
       
@@ -257,38 +387,71 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
         position: position // Position for blue dot
       };
     });
-  }, [monthlyData, maxCount, isPreviewVisible]);
+  }, [monthlyData, maxCount, isPreviewVisible, docs, viewportWidth]);
 
-  // Calculate year label positions based on actual bar positions
+  // Calculate year label positions using precise collision detection algorithm
   const yearLabelPositions = useMemo(() => {
-    const years = [];
+    // Calculate the actual year range from the documents
+    const docYears = docs.map(doc => new Date(doc.date).getFullYear());
+    const minYear = docYears.length > 0 ? Math.min(...docYears) : 2021;
+    const maxYear = docYears.length > 0 ? Math.max(...docYears) : 2021;
     
-    for (let year = 2018; year <= 2025; year++) {
-      // Find all bars for this year
+    // Calculate available width for labels
+    const availableWidth = viewportWidth - 64 - 24 - (isPreviewVisible ? 620 : 0) - 24; // Account for sidebar, padding, preview panel
+    
+    // Create year-to-x mapping function
+    const yearToX = (year: number): number => {
       const yearBars = monthlyDataWithHeights.filter(data => data.year === year);
       
-      if (yearBars.length === 0) continue; // Skip years with no bars
-      
-      // Get the first and last bar positions for this year
-      const firstBar = yearBars[0];
-      
-      let yearPosition;
-      if (year === 2018) {
-        // Position 2018 label to the left of the first bar
-        yearPosition = firstBar.position - 8; // 8px to the left of the first bar
+      if (yearBars.length > 0) {
+        const firstBar = yearBars[0];
+        return year === minYear ? firstBar.position - 8 : firstBar.position;
       } else {
-        // Position other year labels at the start of their year's bars
-        yearPosition = firstBar.position;
+        // Calculate position for years without documents
+        const yearIndex = year - minYear;
+        const totalYears = maxYear - minYear + 1;
+        const barWidth = 4;
+        const barsPerYear = 12;
+        const totalBars = totalYears * barsPerYear;
+        const totalBarWidth = totalBars * barWidth;
+        const totalSpacing = availableWidth - totalBarWidth;
+        const spacing = totalSpacing / (totalBars - 1);
+        const leftPadding = 24;
+        
+        const barIndex = yearIndex * barsPerYear;
+        return leftPadding + (barIndex * (barWidth + spacing)) + (barWidth / 2);
       }
-      
-      years.push({
-        year,
-        position: yearPosition
-      });
-    }
+    };
     
-    return years;
-  }, [monthlyDataWithHeights]);
+    // Create text measurement function
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
+    const textCache = new Map<string, number>();
+    
+    const measureText = (text: string): number => {
+      if (!textCache.has(text)) {
+        textCache.set(text, ctx.measureText(text).width);
+      }
+      return textCache.get(text)!;
+    };
+    
+    // Compute labels using the precise algorithm
+    const labelYears = computeYearLabels({
+      y0: minYear,
+      y1: maxYear,
+      widthPx: availableWidth,
+      yearToX,
+      measureText
+    });
+    
+    // Convert to the expected format
+    return labelYears.map(year => ({
+      year,
+      position: yearToX(year),
+      hasDocuments: docs.some(doc => new Date(doc.date).getFullYear() === year)
+    }));
+  }, [monthlyDataWithHeights, docs, isPreviewVisible, viewportWidth]);
 
   // Calculate blue dot position for selected document
   const blueDotPosition = useMemo(() => {

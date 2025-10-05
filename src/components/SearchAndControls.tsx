@@ -6,7 +6,9 @@ import DatePicker from './DatePicker';
 const SearchControlsContainer = styled.div`
   background: white;
   padding: 20px 24px;
-  overflow: hidden; /* Prevent horizontal scrolling */
+  overflow: visible; /* Allow date picker to be visible */
+  position: relative;
+  z-index: 50000; /* High z-index to ensure date picker is above minimap */
 `;
 
 const ControlsRow = styled.div`
@@ -27,8 +29,9 @@ const YearChip = styled.div`
   background: white;
   border-radius: 12px;
   padding: 8px 16px;
-  font-weight: 600;
-  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
 `;
 
 const YearDropdown = styled.select`
@@ -66,6 +69,7 @@ const MonthDropdown = styled.div`
   font-weight: 700;
   color: #1f2937;
   cursor: pointer;
+  transition: all 0.3s ease;
   
   &:hover {
     background-color: #f3f4f6;
@@ -79,7 +83,7 @@ const MonthDropdown = styled.div`
 
 const MonthDropdownContainer = styled.div`
   position: relative;
-  z-index: 10000;
+  z-index: 50002; /* Even higher to be above all other elements */
 `;
 
 const MonthSelector = styled.div`
@@ -154,12 +158,15 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
   currentYear: propCurrentYear = 2021,
   currentMonth: propCurrentMonth = 0,
   currentDay: propCurrentDay = 1,
-  onManualNavigationStart
+  onManualNavigationStart,
+  onHighlightedDate,
+  scrollToDateRef
 }) => {
   const [currentYear, setCurrentYear] = useState(propCurrentYear);
   const [currentMonth, setCurrentMonth] = useState(propCurrentMonth);
   const [currentDay, setCurrentDay] = useState(propCurrentDay);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [highlightedDate, setHighlightedDate] = useState<Date | null>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
   // Sync with props
@@ -175,20 +182,40 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
     setCurrentDay(propCurrentDay);
   }, [propCurrentDay]);
 
-  // Handle click outside to close date picker
+  // Handle click outside to close date picker - PORTAL SAFE VERSION
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+      console.log('🔍 Click outside check - event.target:', event.target);
+      console.log('🔍 Click outside check - event.composedPath:', event.composedPath());
+      
+      // Get the DatePicker container from the portal
+      const datePickerElement = document.querySelector('[data-datepicker-container]');
+      console.log('🔍 DatePicker element found:', datePickerElement);
+      
+      // Check if click is inside trigger or DatePicker using composedPath
+      const path = (event.composedPath && event.composedPath()) || [];
+      const isInsideTrigger = datePickerRef.current && path.includes(datePickerRef.current as EventTarget);
+      const isInsideDatePicker = datePickerElement && path.includes(datePickerElement as EventTarget);
+      
+      console.log('🔍 Is inside trigger:', isInsideTrigger);
+      console.log('🔍 Is inside DatePicker:', isInsideDatePicker);
+      
+      // Only close if click is outside both trigger and DatePicker
+      if (!isInsideTrigger && !isInsideDatePicker) {
+        console.log('🔍 Closing DatePicker - click was outside');
         setIsDatePickerVisible(false);
+      } else {
+        console.log('🔍 Keeping DatePicker open - click was inside');
       }
     };
 
     if (isDatePickerVisible) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // Use pointerdown for better event handling, attach in bubble phase
+      document.addEventListener('pointerdown', handleClickOutside, { capture: false });
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('pointerdown', handleClickOutside);
     };
   }, [isDatePickerVisible]);
 
@@ -199,8 +226,17 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
     
     if (newYear >= minYear) {
       setCurrentYear(newYear);
-      onScrub(new Date(newYear, 0, 1));
+      const targetDate = new Date(newYear, 0, 1); // January 1st of the new year
+      onScrub(targetDate);
       onYearChange?.(newYear);
+      
+      // Trigger scrolling to the beginning of the new year
+      setTimeout(() => {
+        if (scrollToDateRef?.current) {
+          console.log('Scrolling to beginning of year:', newYear);
+          scrollToDateRef.current(targetDate);
+        }
+      }, 100);
     }
   };
 
@@ -211,8 +247,17 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
     
     if (newYear <= maxYear) {
       setCurrentYear(newYear);
-      onScrub(new Date(newYear, 0, 1));
+      const targetDate = new Date(newYear, 0, 1); // January 1st of the new year
+      onScrub(targetDate);
       onYearChange?.(newYear);
+      
+      // Trigger scrolling to the beginning of the new year
+      setTimeout(() => {
+        if (scrollToDateRef?.current) {
+          console.log('Scrolling to beginning of year:', newYear);
+          scrollToDateRef.current(targetDate);
+        }
+      }, 100);
     }
   };
 
@@ -237,9 +282,17 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
       setCurrentYear(newYear);
       setCurrentMonth(newMonth);
       setCurrentDay(1);
-      onScrub(new Date(newYear, newMonth, 1));
+      onScrub(newDate);
       onYearChange?.(newYear);
       onMonthChange?.(newMonth);
+      
+      // Trigger scrolling to the beginning of the new month
+      setTimeout(() => {
+        if (scrollToDateRef?.current) {
+          console.log('Scrolling to beginning of month:', newYear, newMonth);
+          scrollToDateRef.current(newDate);
+        }
+      }, 100);
     }
   };
 
@@ -264,13 +317,22 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
       setCurrentYear(newYear);
       setCurrentMonth(newMonth);
       setCurrentDay(1);
-      onScrub(new Date(newYear, newMonth, 1));
+      onScrub(newDate);
       onYearChange?.(newYear);
       onMonthChange?.(newMonth);
+      
+      // Trigger scrolling to the beginning of the new month
+      setTimeout(() => {
+        if (scrollToDateRef?.current) {
+          console.log('Scrolling to beginning of month:', newYear, newMonth);
+          scrollToDateRef.current(newDate);
+        }
+      }, 100);
     }
   };
 
   const handleDatePickerToggle = () => {
+    console.log('DatePicker toggle clicked, current state:', isDatePickerVisible);
     setIsDatePickerVisible(!isDatePickerVisible);
   };
 
@@ -279,12 +341,31 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
     setCurrentYear(date.getFullYear());
     setCurrentMonth(date.getMonth());
     setCurrentDay(date.getDate());
-    onScrub(date);
     onYearChange?.(date.getFullYear());
     onMonthChange?.(date.getMonth());
+    
+    // Trigger highlight effect
+    setHighlightedDate(date);
+    onHighlightedDate?.(date); // Notify parent component
+    
+    // Delay scrolling to ensure calendar has updated to new month/year
+    setTimeout(() => {
+      onScrub(date);
+      // Use the ref to trigger scrolling in CalendarArea
+      if (scrollToDateRef?.current) {
+        console.log('Triggering scroll via ref for date:', date);
+        scrollToDateRef.current(date);
+      }
+    }, 100); // Small delay to ensure calendar has updated
+    
+    setTimeout(() => {
+      setHighlightedDate(null);
+      onHighlightedDate?.(null); // Clear highlight after timeout
+    }, 2000); // 2000ms highlight duration
   };
 
   const handleDatePickerClose = () => {
+    console.log('DatePicker close called');
     setIsDatePickerVisible(false);
   };
 
@@ -327,8 +408,17 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
                   onManualNavigationStart?.();
                   const newYear = parseInt(e.target.value);
                   setCurrentYear(newYear);
-                  onScrub(new Date(newYear, 0, 1));
+                  const targetDate = new Date(newYear, 0, 1); // January 1st of the new year
+                  onScrub(targetDate);
                   onYearChange?.(newYear);
+                  
+                  // Trigger scrolling to the beginning of the new year
+                  setTimeout(() => {
+                    if (scrollToDateRef?.current) {
+                      console.log('Scrolling to beginning of year from dropdown:', newYear);
+                      scrollToDateRef.current(targetDate);
+                    }
+                  }, 100);
                 }}
               >
                 {Array.from(new Set(docs.map(doc => new Date(doc.date).getFullYear())))
@@ -349,7 +439,9 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
           {scale === 'day' && (
             <MonthSelector>
               <MonthDropdownContainer ref={datePickerRef}>
-                <MonthDropdown onClick={handleDatePickerToggle}>
+                <MonthDropdown 
+                  onClick={handleDatePickerToggle}
+                >
                   {new Date(currentYear, currentMonth, currentDay).toLocaleDateString('en-US', { 
                     month: 'long', 
                     year: 'numeric'
@@ -361,6 +453,8 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
                   onDateSelect={handleDateSelect}
                   onClose={handleDatePickerClose}
                   isVisible={isDatePickerVisible}
+                  triggerRef={datePickerRef}
+                  highlightedDate={highlightedDate}
                 />
               </MonthDropdownContainer>
               <NavButton onClick={handlePrevMonth} aria-label="Previous month">
