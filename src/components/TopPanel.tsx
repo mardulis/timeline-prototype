@@ -90,11 +90,11 @@ const ChipIcon = styled.div<{ isActive: boolean }>`
 
 const modeConfig = {
   all: { label: 'All', icon: <img src="/All.svg" alt="All" width="16" height="16" /> },
-  chronology_dol: { label: 'Chronology Sort w DOL', icon: <img src="/view.svg" alt="View" width="16" height="16" /> },
-  facility_split: { label: 'Facility Split', icon: <img src="/view.svg" alt="View" width="16" height="16" /> },
-  category_sort: { label: 'Category Sort', icon: <img src="/view.svg" alt="View" width="16" height="16" /> },
-  category_sort_2025: { label: 'Category Sort 2025', icon: <img src="/view.svg" alt="View" width="16" height="16" /> },
-  billing_finances: { label: 'Billing & Finances', icon: <img src="/view.svg" alt="View" width="16" height="16" /> }
+  chronology_dol: { label: 'Chronology Sort w DOL', icon: <img src="/View.svg" alt="View" width="16" height="16" /> },
+  facility_split: { label: 'Facility Split', icon: <img src="/View.svg" alt="View" width="16" height="16" /> },
+  category_sort: { label: 'Category Sort', icon: <img src="/View.svg" alt="View" width="16" height="16" /> },
+  category_sort_2025: { label: 'Category Sort 2025', icon: <img src="/View.svg" alt="View" width="16" height="16" /> },
+  billing_finances: { label: 'Billing & Finances', icon: <img src="/View.svg" alt="View" width="16" height="16" /> }
 };
 
 const TopPanel: React.FC<TopPanelProps> = ({ mode, onModeChange }) => {

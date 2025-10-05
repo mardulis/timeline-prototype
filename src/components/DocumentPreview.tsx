@@ -423,7 +423,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
             >
               <AccordionTitle>
                 <AccordionIcon>
-                  <img src="/medications.svg" alt="Medications" width="16" height="16" />
+                  <img src="/Medications.svg" alt="Medications" width="16" height="16" />
                 </AccordionIcon>
                 Medication ({document.medications.length})
               </AccordionTitle>

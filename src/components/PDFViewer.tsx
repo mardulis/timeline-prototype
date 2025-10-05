@@ -8,12 +8,6 @@ const PDFViewerContainer = styled.div`
   flex-direction: column;
 `;
 
-const PDFFrame = styled.iframe`
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: white;
-`;
 
 const ErrorContainer = styled.div`
   display: flex;
@@ -81,17 +75,39 @@ const LoadingSpinner = styled.div`
   }
 `;
 
+const PDFObject = styled.object`
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+`;
+
+const PDFEmbed = styled.embed`
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+`;
+
 const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [useObject, setUseObject] = useState(true); // Try object first, then embed
 
   const handleLoad = () => {
     setIsLoading(false);
   };
 
   const handleError = () => {
-    setIsLoading(false);
-    setHasError(true);
+    if (useObject) {
+      // Try embed as fallback
+      setUseObject(false);
+      setIsLoading(true);
+    } else {
+      // Both failed
+      setIsLoading(false);
+      setHasError(true);
+    }
   };
 
   if (hasError) {
@@ -119,13 +135,33 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
           <div>Loading PDF...</div>
         </LoadingContainer>
       )}
-      <PDFFrame
-        src={`${pdfPath}#toolbar=1&navpanes=1&scrollbar=1`}
-        title="PDF Document"
-        onLoad={handleLoad}
-        onError={handleError}
-        style={{ display: isLoading ? 'none' : 'block' }}
-      />
+      {useObject ? (
+        <PDFObject
+          data={`${pdfPath}#toolbar=1&navpanes=1&scrollbar=1`}
+          type="application/pdf"
+          onLoad={handleLoad}
+          onError={handleError}
+          style={{ display: isLoading ? 'none' : 'block' }}
+        >
+          <ErrorContainer>
+            <ErrorTitle>PDF Preview Not Supported</ErrorTitle>
+            <ErrorMessage>
+              Your browser doesn't support PDF preview with object tag.
+            </ErrorMessage>
+            <DownloadButton href={pdfPath} download target="_blank">
+              📄 Download PDF
+            </DownloadButton>
+          </ErrorContainer>
+        </PDFObject>
+      ) : (
+        <PDFEmbed
+          src={`${pdfPath}#toolbar=1&navpanes=1&scrollbar=1`}
+          type="application/pdf"
+          onLoad={handleLoad}
+          onError={handleError}
+          style={{ display: isLoading ? 'none' : 'block' }}
+        />
+      )}
     </PDFViewerContainer>
   );
 };
