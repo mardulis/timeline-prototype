@@ -249,7 +249,10 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     }
     
     const scrollableContainer = calendarRef.current.querySelector('.scrollable-grid') as HTMLElement;
-    if (!scrollableContainer) return;
+    if (!scrollableContainer) {
+      console.warn('Scrollable container not found for document visibility check');
+      return;
+    }
     
     // Find the selected document element with retry logic for view transitions
     let selectedDocElement = scrollableContainer.querySelector(`[data-doc-id="${docId}"]`) as HTMLElement;
@@ -260,6 +263,8 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
         selectedDocElement = scrollableContainer.querySelector(`[data-doc-id="${docId}"]`) as HTMLElement;
         if (selectedDocElement) {
           performScrollToKeepVisible(selectedDocElement, scrollableContainer);
+        } else {
+          console.warn(`Document element not found for ID: ${docId}`);
         }
       }, 100); // Wait for DOM update
       return;
@@ -517,12 +522,14 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
         onMonthChange?.(newMonth);
         onDayChange?.(newDay);
         
-        // SaaS Pattern: No automatic scrolling on document selection
-        // This preserves the user's current scroll position and prevents jarring resets
-        // Users can manually scroll to see the selected document if needed
+        // Smart scrolling: Only scroll if document is not visible
+        // This brings documents into view when needed without jarring resets
+        setTimeout(() => {
+          scrollToKeepDocumentVisible(selectedDocId);
+        }, 100); // Small delay to ensure DOM has updated
       }
     }
-  }, [scale, selectedDocId, docs, onYearChange, onMonthChange, onDayChange, isManualNavigationRef]);
+  }, [scale, selectedDocId, docs, onYearChange, onMonthChange, onDayChange, isManualNavigationRef, scrollToKeepDocumentVisible]);
 
 
   const handleDocSelect = (doc: Doc) => {
@@ -834,8 +841,10 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
             const targetDate = new Date(year, 0, 1); // January 1st of the target year
             scrollToColumnWithSmartScroll(targetDate, `[data-year="${year}"]`);
             
-            // Reset the flag immediately for faster response
-            isManualNavigationRef.current = false;
+            // Reset the flag after a delay to allow scrolling to complete
+            setTimeout(() => {
+              isManualNavigationRef.current = false;
+            }, 200);
           }}
           onMonthClick={(month) => {
             isManualNavigationRef.current = true;
@@ -844,8 +853,10 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
             const targetDate = new Date(currentYear, month, 1);
             scrollToColumnWithSmartScroll(targetDate, `[data-month="${month}"]`);
             
-    // Reset the flag immediately for faster response
-    isManualNavigationRef.current = false;
+            // Reset the flag after a delay to allow scrolling to complete
+            setTimeout(() => {
+              isManualNavigationRef.current = false;
+            }, 200);
           }}
           onDayClick={(day) => {
             isManualNavigationRef.current = true;
@@ -854,8 +865,10 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
             const targetDate = new Date(currentYear, currentMonth, day);
             scrollToColumnWithSmartScroll(targetDate, `[data-day="${day}"]`);
             
-    // Reset the flag immediately for faster response
-    isManualNavigationRef.current = false;
+            // Reset the flag after a delay to allow scrolling to complete
+            setTimeout(() => {
+              isManualNavigationRef.current = false;
+            }, 200);
           }}
         />
       </MinimapSection>
