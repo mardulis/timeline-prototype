@@ -39,28 +39,23 @@ code {
 /* Top fade */
 .scroll-fade::before {
   top: 0;
-  background-image:
-    linear-gradient(
-      to bottom,
-      rgba(255,255,255,calc(0.95 * var(--fade-strength))) 0%,
-      rgba(255,255,255,calc(0.75 * var(--fade-strength))) 35%,
-      rgba(255,255,255,0) 100%
-    );
-  /* Match bg exactly to avoid a seam on patterned parents */
-  background-color: var(--fade-bg);
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.95) 0%,
+    rgba(255,255,255,0.75) 35%,
+    rgba(255,255,255,0) 100%
+  );
 }
 
 /* Bottom fade */
 .scroll-fade::after {
   bottom: 0;
-  background-image:
-    linear-gradient(
-      to top,
-      rgba(255,255,255,calc(0.95 * var(--fade-strength))) 0%,
-      rgba(255,255,255,calc(0.75 * var(--fade-strength))) 35%,
-      rgba(255,255,255,0) 100%
-    );
-  background-color: var(--fade-bg);
+  background: linear-gradient(
+    to top,
+    rgba(255,255,255,0.95) 0%,
+    rgba(255,255,255,0.75) 35%,
+    rgba(255,255,255,0) 100%
+  );
 }
 
 /* Show/hide based on scroll position */
@@ -69,22 +64,21 @@ code {
 
 /* Optional: dark mode support */
 @media (prefers-color-scheme: dark) {
-  .scroll-fade {
-    --fade-bg: #0b0d10;
-  }
   .scroll-fade::before {
-    background-image:
-      linear-gradient(to bottom,
-        rgba(11,13,16,0.96) 0%,
-        rgba(11,13,16,0.8) 40%,
-        rgba(11,13,16,0) 100%);
+    background: linear-gradient(
+      to bottom,
+      rgba(11,13,16,0.95) 0%,
+      rgba(11,13,16,0.75) 35%,
+      rgba(11,13,16,0) 100%
+    );
   }
   .scroll-fade::after {
-    background-image:
-      linear-gradient(to top,
-        rgba(11,13,16,0.96) 0%,
-        rgba(11,13,16,0.8) 40%,
-        rgba(11,13,16,0) 100%);
+    background: linear-gradient(
+      to top,
+      rgba(11,13,16,0.95) 0%,
+      rgba(11,13,16,0.75) 35%,
+      rgba(11,13,16,0) 100%
+    );
   }
 }
 
