@@ -210,13 +210,25 @@ export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
   try {
     const response = await fetch('/Test.csv');
     if (!response.ok) {
-      throw new Error(`Failed to load CSV: ${response.statusText}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`Failed to load CSV: ${response.statusText}`);
+      }
+      return [];
     }
     
     const csvContent = await response.text();
+    if (!csvContent || csvContent.trim().length === 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('CSV file is empty');
+      }
+      return [];
+    }
+    
     return parseCSV(csvContent);
   } catch (error) {
-    console.error('Error loading CSV:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error loading CSV:', error);
+    }
     return [];
   }
 };

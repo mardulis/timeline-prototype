@@ -92,12 +92,16 @@ const PDFViewer: React.FC<{ pdfPath: string }> = ({ pdfPath }) => {
   }, [pdfPath]);
 
   const handleLoad = () => {
-    console.log('PDF loaded successfully:', pdfPath);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('PDF loaded successfully:', pdfPath);
+    }
     setIsLoading(false);
   };
 
   const handleError = () => {
-    console.log('PDF failed to load:', pdfPath);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('PDF failed to load:', pdfPath);
+    }
     setIsLoading(false);
     setHasError(true);
   };
