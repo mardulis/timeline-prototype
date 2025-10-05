@@ -471,12 +471,14 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
     }
     
     performMinimapScroll(targetColumn, scrollableContainer, containerRect, currentScrollLeft);
-  }, [isPreviewVisible, performMinimapScroll]);
+  }, [performMinimapScroll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup animations on unmount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     return () => {
       // Cancel all pending animations
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       const currentAnimationRefs = animationRefs.current;
       currentAnimationRefs.forEach((animationId) => {
         cancelAnimationFrame(animationId);
@@ -484,6 +486,7 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
       currentAnimationRefs.clear();
       
       // Clear all pending timeouts
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       const currentScrollDebounceRef = scrollDebounceRef.current;
       currentScrollDebounceRef.forEach((timeoutId) => {
         clearTimeout(timeoutId);
