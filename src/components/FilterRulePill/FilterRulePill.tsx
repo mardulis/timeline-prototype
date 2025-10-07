@@ -70,9 +70,27 @@ export default function FilterRulePill(props: FilterRulePillProps) {
   const valBtnRef = React.useRef<HTMLButtonElement>(null);
   const [valPosition, setValPosition] = React.useState({ top: 0, left: 0 });
   const [valVisible, setValVisible] = React.useState(false);
+  const [valSearchQuery, setValSearchQuery] = React.useState<string>('');
 
   // Check if dropdowns are open
   const valOpen = openDropdown === valDropdownId;
+
+  // Filter values based on search query
+  const filteredValues = React.useMemo(() => {
+    if (!valSearchQuery.trim()) return values;
+    
+    const query = valSearchQuery.toLowerCase();
+    return values.filter(opt => 
+      opt.label.toLowerCase().includes(query)
+    );
+  }, [values, valSearchQuery]);
+
+  // Clear search when dropdown closes
+  React.useEffect(() => {
+    if (!valOpen) {
+      setValSearchQuery('');
+    }
+  }, [valOpen]);
 
   // Auto-open value menu if requested
   React.useEffect(() => {
@@ -80,6 +98,19 @@ export default function FilterRulePill(props: FilterRulePillProps) {
       setOpenDropdown(valDropdownId);
     }
   }, [openValueMenuInitially, valOpen, valDropdownId, setOpenDropdown]);
+
+  // Auto-focus search input when value menu opens
+  React.useEffect(() => {
+    if (valOpen && valVisible) {
+      // Small delay to ensure the menu is rendered
+      setTimeout(() => {
+        const searchInput = document.querySelector(`[data-dropdown="${valDropdownId}"] input[type="text"]`) as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }, 10);
+    }
+  }, [valOpen, valVisible, valDropdownId]);
 
   // --- Helpers --------------------------------------------------------------
 
@@ -243,30 +274,51 @@ export default function FilterRulePill(props: FilterRulePillProps) {
           style={{ top: valPosition.top, left: valPosition.left }}
           data-dropdown={valDropdownId}
         >
-          {values.map(opt => {
-            // ✅ Derive per-row checked from the Set
-            const checked = isChecked(opt.id);
-            return (
-              <button
-                key={opt.id}
-                role="menuitemcheckbox"
-                aria-checked={checked}
-                className={cls.valueRow}
-                onClick={() => toggle(opt.id)}
-              >
-                <span 
-                  className={`${cls.checkbox} ${checked ? cls.checked : ""}`}
-                >
-                  {checked && (
-                    <svg viewBox="0 0 20 20" width="16" height="16">
-                      <path d="M16 6 8.5 13.5 4 9" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </span>
-                <span className={cls.valueLabel}>{opt.label}</span>
-              </button>
-            );
-          })}
+          {/* Search input - sticky at top (hidden for Medical Entity) */}
+          {label !== 'Medical Entity' && (
+            <div className={cls.searchContainer}>
+              <input
+                type="text"
+                placeholder={`Search ${label.toLowerCase()}...`}
+                value={valSearchQuery}
+                onChange={(e) => setValSearchQuery(e.target.value)}
+                className={cls.searchInput}
+                autoFocus
+              />
+            </div>
+          )}
+          
+          {/* Filtered values */}
+          <div className={cls.valuesContainer}>
+            {filteredValues.length === 0 ? (
+              <div className={cls.noResults}>No matches</div>
+            ) : (
+              filteredValues.map(opt => {
+                // ✅ Derive per-row checked from the Set
+                const checked = isChecked(opt.id);
+                return (
+                  <button
+                    key={opt.id}
+                    role="menuitemcheckbox"
+                    aria-checked={checked}
+                    className={cls.valueRow}
+                    onClick={() => toggle(opt.id)}
+                  >
+                    <span 
+                      className={`${cls.checkbox} ${checked ? cls.checked : ""}`}
+                    >
+                      {checked && (
+                        <svg viewBox="0 0 20 20" width="16" height="16">
+                          <path d="M16 6 8.5 13.5 4 9" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </span>
+                    <span className={cls.valueLabel}>{opt.label}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>,
         document.body
       )}

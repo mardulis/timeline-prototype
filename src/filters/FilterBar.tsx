@@ -251,7 +251,7 @@ const QuickFilterMenu = styled.div<{ isOpen: boolean; position: { top: number; l
   border: 0.5px solid #e5e7eb;
   padding: 8px;
   min-width: 250px;
-  max-width: min(90vw, 340px);
+  max-width: min(90vw, 300px); /* Updated to max 300px */
   max-height: 60vh;
   overflow: auto;
   display: ${props => props.isOpen ? 'block' : 'none'};
@@ -260,6 +260,29 @@ const QuickFilterMenu = styled.div<{ isOpen: boolean; position: { top: number; l
   opacity: 1;
   transform: scale(1);
   pointer-events: auto;
+  
+  /* Remove scrollbar borders */
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border: none;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 3px;
+    border: none;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+  }
 `;
 
 const MenuSearchInput = styled.input`
@@ -307,61 +330,11 @@ const QuickFilterMenuItem = styled.button<{ isSelected?: boolean }>`
   }
 `;
 
-const Checkbox = styled.div<{ checked: boolean }>`
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  
-  img {
-    display: block;
-    margin: 0;
-    padding: 0;
-    border: none;
-    outline: none;
-  }
-`;
 
 export function FilterBar() {
   const { filters, setFilters, results, clearFilters, query, setQuery } = useSearch();
   const [newlyCreatedPills, setNewlyCreatedPills] = useState<Set<string>>(new Set());
   const { setOpenDropdown } = useDropdown();
-  
-  // Keep newly created pills visible until refresh - no need to clear them when they get values
-  
-  // Remove empty pills on component mount/refresh
-  React.useEffect(() => {
-    const updatedFilters = { ...filters };
-    let hasChanges = false;
-    
-    // Remove filters that have no values
-    if (filters.date && !filters.date.start && !filters.date.end) {
-      delete updatedFilters.date;
-      hasChanges = true;
-    }
-    if (filters.facility && !filters.facility.values?.length) {
-      delete updatedFilters.facility;
-      hasChanges = true;
-    }
-    if (filters.medical && !filters.medical.medications?.length && !filters.medical.diagnoses?.length && !filters.medical.labs?.length) {
-      delete updatedFilters.medical;
-      hasChanges = true;
-    }
-    if (filters.author && !filters.author.values?.length) {
-      delete updatedFilters.author;
-      hasChanges = true;
-    }
-    if (filters.docType && !filters.docType.values?.length) {
-      delete updatedFilters.docType;
-      hasChanges = true;
-    }
-    
-    if (hasChanges) {
-      setFilters(updatedFilters);
-    }
-  }, [filters, setFilters]); // Run when filters or setFilters change
   
   // State for quick filter menus
   const [activeQuickFilter, setActiveQuickFilter] = React.useState<string | null>(null);
@@ -371,12 +344,9 @@ export function FilterBar() {
   const [showFilterSection, setShowFilterSection] = React.useState<boolean>(false);
   const quickFilterRefs = React.useRef<{ [key: string]: HTMLButtonElement | null }>({});
   
-  // Handle filter section toggle
-  const handleFilterSectionToggle = () => {
-    setShowFilterSection(!showFilterSection);
-  };
+  // Keep newly created pills visible until refresh - no need to clear them when they get values
   
-  // Calculate menu position instantly when opening
+  // Remove empty pills on component mount/refresh
   React.useEffect(() => {
     if (activeQuickFilter) {
       const buttonRef = quickFilterRefs.current[activeQuickFilter];
@@ -755,7 +725,7 @@ export function FilterBar() {
   
   
   // Define quick filters (always visible when no active filters)
-  const quickFilters = [
+  const quickFilters = React.useMemo(() => [
     { 
       key: 'author', 
       label: 'Author',
@@ -870,7 +840,34 @@ export function FilterBar() {
       },
       onClear: () => handleMedicalChange({})
     }
-  ];
+  ], [allPossibleAuthors, allPossibleFacilities, filters.author?.values, filters.facility?.values, filters.medical, handleAuthorChange, handleFacilityChange, handleMedicalChange]);
+  
+  // Auto-focus search input when menu opens
+  React.useEffect(() => {
+    if (menuVisible && activeQuickFilter) {
+      const filter = quickFilters.find(f => f.key === activeQuickFilter);
+      if (filter) {
+        const shouldShowSearch = (filter.key === 'facility' && allPossibleFacilities.length > 5) ||
+                               (filter.key === 'author' && allPossibleAuthors.length > 5) ||
+                               (filter.key === 'docType' && allPossibleTypes.length > 5);
+        
+        if (shouldShowSearch) {
+          // Small delay to ensure the menu is rendered
+          setTimeout(() => {
+            const searchInput = document.querySelector('[data-quick-filter-menu] input[type="text"]') as HTMLInputElement;
+            if (searchInput) {
+              searchInput.focus();
+            }
+          }, 10);
+        }
+      }
+    }
+  }, [menuVisible, activeQuickFilter, allPossibleFacilities.length, allPossibleAuthors.length, allPossibleTypes.length, quickFilters]);
+  
+  // Handle filter section toggle
+  const handleFilterSectionToggle = () => {
+    setShowFilterSection(!showFilterSection);
+  };
   
   // Get filters that are not currently active as pills
   const getMoreFilters = () => {
@@ -1232,6 +1229,7 @@ export function FilterBar() {
             const shouldShowSearch = (filter.key === 'facility' && allPossibleFacilities.length > 5) ||
                                    (filter.key === 'author' && allPossibleAuthors.length > 5) ||
                                    (filter.key === 'docType' && allPossibleTypes.length > 5);
+            // Medical Entity doesn't need search - only has 3 options (Medications, Diagnoses, Labs)
             
             return (
               <QuickFilterMenu
@@ -1239,62 +1237,88 @@ export function FilterBar() {
                 position={menuPosition}
                 data-quick-filter-menu
               >
-                {/* Search input - only show when needed */}
+                {/* Search input - sticky at top */}
                 {shouldShowSearch && (
-                  <MenuSearchInput
-                    type="text"
-                    placeholder={`Search ${filter.label.toLowerCase()}...`}
-                    value={menuSearchQuery}
-                    onChange={(e) => setMenuSearchQuery(e.target.value)}
-                  />
+                  <div style={{
+                    position: 'sticky',
+                    top: 0,
+                    background: '#ffffff',
+                    zIndex: 1,
+                    paddingBottom: '8px',
+                    marginBottom: '4px'
+                    /* No divider line below search */
+                  }}>
+                    <MenuSearchInput
+                      type="text"
+                      placeholder={`Search ${filter.label.toLowerCase()}...`}
+                      value={menuSearchQuery}
+                      onChange={(e) => setMenuSearchQuery(e.target.value)}
+                    />
+                  </div>
                 )}
                 
-                {/* Filter items */}
-                {filteredValues.map(value => {
-                  // Determine if this value is currently selected
-                  let isSelected = false;
-                  if (filter.key === 'facility') {
-                    isSelected = (filters.facility?.values || []).includes(value.id);
-                  } else if (filter.key === 'author') {
-                    isSelected = (filters.author?.values || []).includes(value.id);
-                  } else if (filter.key === 'medical') {
-                    const medical = filters.medical || { medications: [], diagnoses: [], labs: [] };
-                    if (value.id === 'medications') {
-                      isSelected = (medical.medications || []).length > 0;
-                    } else if (value.id === 'diagnoses') {
-                      isSelected = (medical.diagnoses || []).length > 0;
-                    } else if (value.id === 'labs') {
-                      isSelected = (medical.labs || []).length > 0;
+                {/* Filter items - scrollable */}
+                <div style={{
+                  maxHeight: shouldShowSearch ? '50vh' : '60vh',
+                  overflowY: 'auto',
+                  /* Remove scrollbar borders */
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#e5e7eb transparent'
+                }}>
+                  {filteredValues.map(value => {
+                    // Determine if this value is currently selected
+                    let isSelected = false;
+                    if (filter.key === 'facility') {
+                      isSelected = (filters.facility?.values || []).includes(value.id);
+                    } else if (filter.key === 'author') {
+                      isSelected = (filters.author?.values || []).includes(value.id);
+                    } else if (filter.key === 'medical') {
+                      const medical = filters.medical || { medications: [], diagnoses: [], labs: [] };
+                      if (value.id === 'medications') {
+                        isSelected = (medical.medications || []).length > 0;
+                      } else if (value.id === 'diagnoses') {
+                        isSelected = (medical.diagnoses || []).length > 0;
+                      } else if (value.id === 'labs') {
+                        isSelected = (medical.labs || []).length > 0;
+                      }
                     }
-                  }
-                  
-                  return (
-                    <QuickFilterMenuItem
-                      key={value.id}
-                      isSelected={isSelected}
-                      onClick={() => {
-                        // Apply the filter value (handles multiselect internally)
-                        filter.onValueChange?.(value.id);
-                        
-                        // Always close menu after selection to create pill
-                        setActiveQuickFilter(null);
-                      }}
-                    >
-                      {isMultiselect && (
-                        <Checkbox checked={isSelected}>
-                          <img 
-                            src={isSelected ? "/svg/Checked.svg" : "/svg/Unchecked.svg"} 
-                            alt={isSelected ? "checked" : "unchecked"} 
-                            width="20" 
-                            height="20"
-                            style={{ display: 'block', margin: 0, padding: 0 }}
-                          />
-                        </Checkbox>
-                      )}
-                      {value.label}
-                    </QuickFilterMenuItem>
-                  );
-                })}
+                    
+                    return (
+                      <QuickFilterMenuItem
+                        key={value.id}
+                        isSelected={isSelected}
+                        onClick={() => {
+                          // Apply the filter value (handles multiselect internally)
+                          filter.onValueChange?.(value.id);
+                          
+                          // Always close menu after selection to create pill
+                          setActiveQuickFilter(null);
+                        }}
+                      >
+                        {isMultiselect && (
+                          <div style={{
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '4px',
+                            border: '1px solid #e5e7eb',
+                            background: isSelected ? '#2582FF' : '#ffffff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            {isSelected && (
+                              <svg viewBox="0 0 20 20" width="16" height="16">
+                                <path d="M16 6 8.5 13.5 4 9" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
+                        )}
+                        {value.label}
+                      </QuickFilterMenuItem>
+                    );
+                  })}
+                </div>
               </QuickFilterMenu>
             );
           })()}

@@ -10,6 +10,26 @@ const CSS_VARS = `
   --muted: #98A2B3;
   --ring: #3B82F6;
 }
+
+/* Remove scrollbar borders */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+  border: none;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
 `;
 
 export type MenuItem = {
@@ -233,11 +253,10 @@ const SelectMenu: React.FC<SelectMenuProps> = ({
 
   // Focus management
   useEffect(() => {
-    const focusedItem = itemRefs.current[focusedIndex];
-    if (focusedItem) {
-      focusedItem.focus();
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
     }
-  }, [focusedIndex]);
+  }, [showSearch]);
 
   // Get appropriate ARIA attributes
   const getItemProps = (item: MenuItem, index: number) => {
@@ -290,7 +309,16 @@ const SelectMenu: React.FC<SelectMenuProps> = ({
           backgroundColor: '#ffffff',
           borderColor: '#E6EAF2',
           fontFamily: 'system-ui, sans-serif',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          border: '0.5px solid #e5e7eb',
+          borderRadius: '18px',
+          padding: '8px',
+          minWidth: '250px',
+          maxWidth: 'min(90vw, 300px)', // Updated to max 300px
+          maxHeight: '60vh',
+          /* Remove scrollbar borders */
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#e5e7eb transparent',
           ...style
         }}
         ref={menuRef}
@@ -310,43 +338,53 @@ const SelectMenu: React.FC<SelectMenuProps> = ({
           </div>
         )}
 
-        {/* Search Input */}
+        {/* Search Input - Sticky */}
         {showSearch && (
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ position: 'relative' }}>
-                  <div style={{ 
-                    position: 'absolute', 
-                    left: '12px', 
-                    top: '50%', 
-                    transform: 'translateY(-50%)',
-                    color: '#9ca3af'
-                  }}>
-                    <SearchIcon />
-                  </div>
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="
-                  w-full h-9 pl-10 pr-3 rounded-lg bg-gray-50 border-none
-                  text-sm font-medium placeholder-[var(--muted)]
-                  focus:ring-2 focus:ring-[var(--ring)]/35 focus:outline-none
-                "
-                style={{ color: '#0F172A' }}
-                aria-label="Search menu items"
-                aria-controls="menu-list"
-              />
-            </div>
+          <div style={{ 
+            position: 'sticky',
+            top: 0,
+            background: '#ffffff',
+            zIndex: 1,
+            paddingBottom: '8px',
+            marginBottom: '4px'
+            /* No divider line below search */
+          }}>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ 
+                width: '100%',
+                color: '#374151',
+                fontFamily: 'Switzer, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+                fontSize: '13px',
+                padding: '8px 12px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                backgroundColor: '#ffffff'
+              }}
+              aria-label="Search menu items"
+              aria-controls="menu-list"
+            />
           </div>
         )}
 
-        {/* Menu Items */}
+        {/* Menu Items - Scrollable */}
         <div
           id="menu-list"
           role="menu"
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '4px',
+            maxHeight: showSearch ? '50vh' : '60vh',
+            overflowY: 'auto',
+            /* Remove scrollbar borders */
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#e5e7eb transparent'
+          }}
         >
           {filteredItems.length === 0 ? (
             <div style={{ 

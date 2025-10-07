@@ -45,8 +45,8 @@ const MenuItemButton = styled.button<{ disabled?: boolean }>`
 `;
 
 const Checkbox = styled.div<{ checked: boolean }>`
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
