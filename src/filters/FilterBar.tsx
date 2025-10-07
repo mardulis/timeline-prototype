@@ -308,12 +308,20 @@ const QuickFilterMenuItem = styled.button<{ isSelected?: boolean }>`
 `;
 
 const Checkbox = styled.div<{ checked: boolean }>`
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  
+  img {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+  }
 `;
 
 export function FilterBar() {
@@ -360,8 +368,13 @@ export function FilterBar() {
   const [menuPosition, setMenuPosition] = React.useState({ top: 0, left: 0 });
   const [menuVisible, setMenuVisible] = React.useState(false);
   const [menuSearchQuery, setMenuSearchQuery] = React.useState<string>('');
-  const [showFilterSection, setShowFilterSection] = React.useState<boolean>(true);
+  const [showFilterSection, setShowFilterSection] = React.useState<boolean>(false);
   const quickFilterRefs = React.useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  
+  // Handle filter section toggle
+  const handleFilterSectionToggle = () => {
+    setShowFilterSection(!showFilterSection);
+  };
   
   // Calculate menu position instantly when opening
   React.useEffect(() => {
@@ -888,21 +901,6 @@ export function FilterBar() {
             handleDocTypeChange(newTypes);
           },
           onClear: () => handleDocTypeChange([])
-        },
-        {
-          key: 'author',
-          label: 'Author',
-          icon: '/svg/profile.svg',
-          type: 'multiselect' as const,
-          values: allPossibleAuthors.map(author => ({ id: author, label: author })),
-          onValueChange: (valueId: string) => {
-            const currentAuthors = filters.author?.values || [];
-            const newAuthors = currentAuthors.includes(valueId) 
-              ? currentAuthors.filter(a => a !== valueId)
-              : [...currentAuthors, valueId];
-            handleAuthorChange(newAuthors);
-          },
-          onClear: () => handleAuthorChange([])
         }
       ];
       
@@ -929,21 +927,6 @@ export function FilterBar() {
           handleDocTypeChange(newTypes);
         },
         onClear: () => handleDocTypeChange([])
-      },
-      {
-        key: 'author',
-        label: 'Author',
-        icon: '/svg/profile.svg',
-        type: 'multiselect' as const,
-        values: allPossibleAuthors.map(author => ({ id: author, label: author })),
-        onValueChange: (valueId: string) => {
-          const currentAuthors = filters.author?.values || [];
-          const newAuthors = currentAuthors.includes(valueId) 
-            ? currentAuthors.filter(a => a !== valueId)
-            : [...currentAuthors, valueId];
-          handleAuthorChange(newAuthors);
-        },
-        onClear: () => handleAuthorChange([])
       }
     ];
     
@@ -979,7 +962,7 @@ export function FilterBar() {
             
             <FiltersButton
               hasFilters={getActiveFiltersInOrder().length > 0}
-              onClick={() => setShowFilterSection(!showFilterSection)}
+              onClick={handleFilterSectionToggle}
             >
               <img src="/svg/filterMailCircleStrokeRounded.svg" alt="Filters" width="16" height="16" />
               Filters
@@ -1302,8 +1285,9 @@ export function FilterBar() {
                           <img 
                             src={isSelected ? "/svg/Checked.svg" : "/svg/Unchecked.svg"} 
                             alt={isSelected ? "checked" : "unchecked"} 
-                            width="16" 
-                            height="16" 
+                            width="20" 
+                            height="20"
+                            style={{ display: 'block', margin: 0, padding: 0 }}
                           />
                         </Checkbox>
                       )}

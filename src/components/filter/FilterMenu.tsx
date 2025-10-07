@@ -45,12 +45,20 @@ const MenuItemButton = styled.button<{ disabled?: boolean }>`
 `;
 
 const Checkbox = styled.div<{ checked: boolean }>`
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  
+  img {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+  }
 `;
 
 const IconContainer = styled.div`
@@ -175,8 +183,9 @@ export const FilterMenu: React.FC<FilterMenuProps> = ({
               <img 
                 src={isItemSelected(item.id) ? "/svg/Checked.svg" : "/svg/Unchecked.svg"} 
                 alt={isItemSelected(item.id) ? "checked" : "unchecked"} 
-                width="16" 
-                height="16" 
+                width="20" 
+                height="20"
+                style={{ display: 'block', margin: 0, padding: 0 }}
               />
             </Checkbox>
           )}
