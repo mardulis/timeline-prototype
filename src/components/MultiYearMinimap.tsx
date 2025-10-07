@@ -137,6 +137,7 @@ const MinimapContainer = styled.div`
   width: 100%;
   overflow: visible; /* Allow content to extend beyond container bounds */
   min-width: 0; /* Allow container to shrink */
+  position: relative; /* Enable absolute positioning for tooltips */
 `;
 
 const MinimapWrapper = styled.div`
@@ -202,7 +203,7 @@ const MinimapBar = styled.div<{ height: number; isActive: boolean; width: number
 `;
 
 const CustomTooltip = styled.div<{ visible: boolean; x: number; y: number }>`
-  position: absolute;
+  position: absolute; /* Use absolute positioning relative to minimap container */
   left: ${props => props.x}px;
   top: ${props => props.y}px;
   background: #1f2937; /* Dark background */
@@ -232,6 +233,27 @@ const BlueDot = styled.div<{ position: number }>`
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transform: translateX(-50%);
   z-index: 10;
+`;
+
+const DOLIndicator = styled.div<{ position: number }>`
+  position: absolute;
+  bottom: -8px;
+  left: ${props => props.position}px;
+  width: 10px;
+  height: 10px;
+  background: #dc2626; /* Red color for DOL */
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateX(-50%);
+  z-index: 9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #b91c1c; /* Darker red on hover */
+    transform: translateX(-50%) scale(1.2);
+  }
 `;
 
 const YearLabel = styled.div<{ position: number; hasData?: boolean }>`
@@ -313,12 +335,11 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
   const monthlyData = useMemo(() => {
     const months = [];
     
-    // Calculate the actual year range from the documents
-    const years = docs.map(doc => new Date(doc.date).getFullYear());
-    const minYear = years.length > 0 ? Math.min(...years) : 2021;
-    const maxYear = years.length > 0 ? Math.max(...years) : 2021;
+    // Use a fixed year range instead of calculating from filtered documents
+    const minYear = 2018; // Fixed minimum year
+    const maxYear = 2025; // Fixed maximum year
     
-    // Generate all months for the actual year range
+    // Generate all months for the fixed year range
     for (let year = minYear; year <= maxYear; year++) {
       for (let month = 0; month < 12; month++) {
         const monthDocs = docs.filter(doc => {
@@ -348,11 +369,10 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
   const monthlyDataWithHeights = useMemo(() => {
     const barWidth = 4; // Fixed 4px width for each bar
     const barsPerYear = 12; // 12 months per year
-    // Calculate the actual year range from the documents
-    const years = docs.map(doc => new Date(doc.date).getFullYear());
-    const minYear = years.length > 0 ? Math.min(...years) : 2021;
-    const maxYear = years.length > 0 ? Math.max(...years) : 2021;
-    const totalYears = maxYear - minYear + 1; // Dynamic total years
+    // Use the same fixed year range as in monthlyData
+    const minYear = 2018; // Fixed minimum year
+    const maxYear = 2025; // Fixed maximum year
+    const totalYears = maxYear - minYear + 1; // Fixed total years
     const totalBars = totalYears * barsPerYear; // Total number of bars
     
     return monthlyData.map((data, index) => {
@@ -387,14 +407,13 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
         position: position // Position for blue dot
       };
     });
-  }, [monthlyData, maxCount, isPreviewVisible, docs, viewportWidth]);
+  }, [monthlyData, maxCount, isPreviewVisible, viewportWidth]);
 
   // Calculate year label positions using precise collision detection algorithm
   const yearLabelPositions = useMemo(() => {
-    // Calculate the actual year range from the documents
-    const docYears = docs.map(doc => new Date(doc.date).getFullYear());
-    const minYear = docYears.length > 0 ? Math.min(...docYears) : 2021;
-    const maxYear = docYears.length > 0 ? Math.max(...docYears) : 2021;
+    // Use the same fixed year range as in monthlyData
+    const minYear = 2018; // Fixed minimum year
+    const maxYear = 2025; // Fixed maximum year
     
     // Calculate available width for labels
     const availableWidth = viewportWidth - 64 - 24 - (isPreviewVisible ? 620 : 0) - 24; // Account for sidebar, padding, preview panel
@@ -490,15 +509,14 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
     if (containerRect) {
       // Calculate the center position of the bar relative to the container
       const barCenterX = data.position;
-      // Calculate Y position higher up to avoid obscuring bars
-      const tooltipY = 30; // Raised 10px from 40px to 30px
+      const tooltipY = 30 + 4; // 30px higher + 4px offset below (within bounds)
       
       // Small delay to prevent flickering
       const timeout = setTimeout(() => {
         setTooltip({
           visible: true,
           x: barCenterX,
-          y: tooltipY,
+          y: tooltipY, // Fixed position below minimap bottom border
           content: `${data.monthName} ${data.year}\n${data.count} documents`
         });
       }, 100);
@@ -514,6 +532,47 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
       setHoverTimeout(null);
     }
     setTooltip(prev => ({ ...prev, visible: false }));
+  };
+
+  // Calculate DOL (Date of Loss) position for March 27, 2020
+  const dolPosition = useMemo(() => {
+    const dolDate = new Date(2020, 2, 27); // March 27, 2020 (month is 0-indexed)
+    const dolYear = dolDate.getFullYear();
+    const dolMonth = dolDate.getMonth();
+    
+    // Find the position for this month in the monthly data
+    const dolData = monthlyDataWithHeights.find(data => 
+      data.year === dolYear && data.month === dolMonth
+    );
+    
+    return dolData ? dolData.position : -1;
+  }, [monthlyDataWithHeights]);
+
+  // DOL tooltip state
+  const [dolTooltip, setDolTooltip] = useState({ visible: false, x: 0, y: 0 });
+
+    const handleDOLMouseEnter = (e: React.MouseEvent) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const rect = e.currentTarget.getBoundingClientRect();
+      const containerRect = e.currentTarget.closest('[data-minimap-container]')?.getBoundingClientRect();
+    
+    if (containerRect) {
+      setDolTooltip({
+        visible: true,
+        x: dolPosition, // Use DOL position directly, same as bar tooltips use data.position
+        y: 30 + 4 // Same fixed position as bar tooltips
+      });
+    }
+  };
+
+  const handleDOLMouseLeave = () => {
+    setDolTooltip({ visible: false, x: 0, y: 0 });
+  };
+
+  const handleDOLClick = () => {
+    // Navigate to March 27, 2020
+    const dolDate = new Date(2020, 2, 27); // March 27, 2020 (month is 0-indexed)
+    onBarClick(dolDate);
   };
 
   return (
@@ -551,9 +610,29 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
           ))}
         </CustomTooltip>
         
+        {/* DOL tooltip */}
+        <CustomTooltip
+          visible={dolTooltip.visible}
+          x={dolTooltip.x}
+          y={dolTooltip.y}
+        >
+          <div>Date of Loss</div>
+          <div>March 27, 2020</div>
+        </CustomTooltip>
+        
         {/* Blue dot for selected document */}
         {blueDotPosition >= 0 && (
           <BlueDot position={blueDotPosition} />
+        )}
+        
+        {/* DOL indicator for March 27, 2020 */}
+        {dolPosition >= 0 && (
+          <DOLIndicator 
+            position={dolPosition}
+            onMouseEnter={handleDOLMouseEnter}
+            onMouseLeave={handleDOLMouseLeave}
+            onClick={handleDOLClick}
+          />
         )}
       </MinimapWrapper>
       

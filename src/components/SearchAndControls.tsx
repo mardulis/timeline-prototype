@@ -2,13 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { SearchAndControlsProps } from '../types/Timeline';
 import DatePicker from './DatePicker';
+import { FilterBar } from '../filters/FilterBar';
 
-const SearchControlsContainer = styled.div`
+const SearchControlsContainer = styled.div<{ isPreviewVisible?: boolean }>`
   background: white;
-  padding: 20px 24px;
+  padding: 0 24px; /* Remove all vertical padding from container */
   overflow: visible; /* Allow date picker to be visible */
   position: relative;
-  z-index: 50000; /* High z-index to ensure date picker is above minimap */
+  z-index: 1000; /* High z-index to ensure date picker is above minimap, but lower than filter dropdowns */
+  margin-right: ${props => props.isPreviewVisible ? '620px' : '0'};
+  transition: margin-right 0.3s ease;
 `;
 
 const ControlsRow = styled.div`
@@ -16,6 +19,9 @@ const ControlsRow = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 8px 0 8px 0; /* 8px top and bottom padding for timeframe section */
+  position: relative; /* Enable z-index stacking */
+  z-index: 50; /* Lower than filters section */
 `;
 
 const LeftControls = styled.div`
@@ -29,8 +35,8 @@ const YearChip = styled.div`
   background: white;
   border-radius: 12px;
   padding: 8px 16px;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: #1f2937;
 `;
 
@@ -39,8 +45,8 @@ const YearDropdown = styled.select`
   border: none;
   border-radius: 8px;
   padding: 8px 12px;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: #1f2937;
   cursor: pointer;
   appearance: none;
@@ -65,8 +71,8 @@ const MonthDropdown = styled.div`
   border: none;
   border-radius: 8px;
   padding: 8px 12px;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: #1f2937;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -160,7 +166,8 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
   currentDay: propCurrentDay = 1,
   onManualNavigationStart,
   onHighlightedDate,
-  scrollToDateRef
+  scrollToDateRef,
+  isPreviewVisible = false
 }) => {
   const [currentYear, setCurrentYear] = useState(propCurrentYear);
   const [currentMonth, setCurrentMonth] = useState(propCurrentMonth);
@@ -370,7 +377,11 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
   };
 
   return (
-    <SearchControlsContainer>
+    <SearchControlsContainer isPreviewVisible={isPreviewVisible}>
+      {/* Search and Filter Bar */}
+      <FilterBar />
+      
+      {/* Time Scale Controls */}
       <ControlsRow>
         <LeftControls>
           <TimeframeSegmented>

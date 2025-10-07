@@ -3,12 +3,12 @@ import styled from 'styled-components';
 import LeftSidebar from './LeftSidebar';
 import TopPanel from './TopPanel';
 import SearchAndControls from './SearchAndControls';
-import CalendarArea from './CalendarArea';
-import DocumentPreview from './DocumentPreview';
+import { SearchAwareContent } from './SearchAwareContent';
 import CSVErrorState from './CSVErrorState';
 import CSVLoadingState from './CSVLoadingState';
 import { TimeScale, Mode, Doc, DocumentPreviewData } from '../types/Timeline';
-import { loadCSVDocuments, loadTestCSVDocuments, parseCSV } from '../utils/csvParser';
+import { loadCSVDocuments, loadTestCSVDocuments, parseCSV, generateRandomDOL } from '../utils/csvParser';
+import { SearchProvider } from '../features/search/SearchCtx';
 
 const DashboardContainer = styled.div`
   display: flex;
@@ -42,28 +42,6 @@ const ContentRow = styled.div`
   position: relative; /* Enable absolute positioning for preview panel */
 `;
 
-const CalendarWrapper = styled.div`
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: white;
-`;
-
-const DocumentPreviewPanel = styled.div<{ isVisible: boolean }>`
-  width: 620px;
-  background: white;
-  border-left: 1px solid #e5e7eb;
-  border-top: 1px solid #e5e7eb; /* Top border at 120px from top */
-  height: calc(100vh - 120px); /* Height from 120px to bottom */
-  overflow-y: auto;
-  position: fixed;
-  top: 120px; /* Position top border at 120px from top of page */
-  right: 0;
-  z-index: 50005; /* Above everything including top panel and date picker */
-  transform: ${props => props.isVisible ? 'translateX(0)' : 'translateX(100%)'};
-  transition: transform 300ms ease-in-out;
-`;
 
 // Convert Doc to DocumentPreviewData
 const convertDocToPreviewData = (doc: Doc): DocumentPreviewData => {
@@ -103,6 +81,11 @@ const TimelineDashboard: React.FC = () => {
       try {
         const csvDocs = await loadCSVDocuments();
         setDocs(csvDocs);
+        
+        // Generate random DOL within middle third of date range
+        if (csvDocs.length > 0) {
+          generateRandomDOL(csvDocs);
+        }
         
         // Update range based on actual data
         if (csvDocs.length > 0) {
@@ -144,6 +127,9 @@ const TimelineDashboard: React.FC = () => {
       }
       
       setDocs(csvDocs);
+      
+      // Generate random DOL within middle third of date range
+      generateRandomDOL(csvDocs);
       
       // Switch to Year timeframe when CSV is loaded
       setScale('year');
@@ -311,72 +297,70 @@ const TimelineDashboard: React.FC = () => {
   };
 
   return (
-    <DashboardContainer>
-      <LeftSidebar />
-      
-      <MainContentArea>
-        <TopSection>
-          <TopPanel mode={mode} onModeChange={handleModeChange} onLoadCSV={handleLoadCSV} />
-          <SearchAndControls
-            scale={scale}
-            onScaleChange={handleScaleChange}
-            onScrub={handleScrub}
-            range={range}
-            docs={docs}
-            onYearChange={handleYearChange}
-            onMonthChange={handleMonthChange}
-            onDayChange={handleDayChange}
-            currentYear={currentYear}
-            currentMonth={currentMonth}
-            currentDay={currentDay}
-            onManualNavigationStart={handleManualNavigationStart}
-            onHighlightedDate={handleHighlightedDate}
-            scrollToDateRef={scrollToDateRef}
-          />
-        </TopSection>
+    <SearchProvider docs={docs}>
+      <DashboardContainer>
+        <LeftSidebar />
         
-        <ContentRow>
-          <CalendarWrapper>
-            {isLoadingCSV ? (
-              <CSVLoadingState />
-            ) : csvError ? (
-              <CSVErrorState error={csvError} onRefresh={handleRefreshCSV} onLoadDefault={handleLoadDefaultCSV} />
-            ) : (
-              <CalendarArea
-                scale={scale}
-                mode={mode}
-                range={range}
-                docs={docs}
-                selectedDocId={selectedDoc?.id}
-                onScaleChange={handleScaleChange}
-                onModeChange={handleModeChange}
-                onScrub={handleScrub}
-                onSelect={handleDocSelect}
-                isPreviewVisible={!!selectedDoc}
-                currentYear={currentYear}
-                currentMonth={currentMonth}
-                currentDay={currentDay}
-                highlightedDate={highlightedDate}
-                onYearChange={handleYearChange}
-                onMonthChange={handleMonthChange}
-                onDayChange={handleDayChange}
-                onManualNavigationStart={handleManualNavigationStart}
-                manualNavigationRef={manualNavigationRef}
-                scrollToDateRef={scrollToDateRef}
-                onHighlightedDate={handleHighlightedDate}
-              />
-            )}
-          </CalendarWrapper>
-          
-          <DocumentPreviewPanel isVisible={!!selectedDoc} data-preview-panel>
-            <DocumentPreview
-              document={previewData}
-              onClose={handleClosePreview}
+        <MainContentArea>
+          <TopSection>
+            <TopPanel mode={mode} onModeChange={handleModeChange} onLoadCSV={handleLoadCSV} />
+            <SearchAndControls
+              scale={scale}
+              onScaleChange={handleScaleChange}
+              onScrub={handleScrub}
+              range={range}
+              docs={docs}
+              onYearChange={handleYearChange}
+              onMonthChange={handleMonthChange}
+              onDayChange={handleDayChange}
+              currentYear={currentYear}
+              currentMonth={currentMonth}
+              currentDay={currentDay}
+              onManualNavigationStart={handleManualNavigationStart}
+              onHighlightedDate={handleHighlightedDate}
+              scrollToDateRef={scrollToDateRef}
+              isPreviewVisible={!!selectedDoc}
             />
-          </DocumentPreviewPanel>
-        </ContentRow>
-      </MainContentArea>
-    </DashboardContainer>
+          </TopSection>
+          
+          {isLoadingCSV ? (
+            <ContentRow style={{ justifyContent: 'center', alignItems: 'center' }}>
+              <CSVLoadingState />
+            </ContentRow>
+          ) : csvError ? (
+            <ContentRow style={{ justifyContent: 'center', alignItems: 'center' }}>
+              <CSVErrorState error={csvError} onRefresh={handleRefreshCSV} onLoadDefault={handleLoadDefaultCSV} />
+            </ContentRow>
+          ) : (
+            <SearchAwareContent
+              scale={scale}
+              mode={mode}
+              range={range}
+              docs={docs}
+              selectedDocId={selectedDoc?.id}
+              onSelect={handleDocSelect}
+              highlightedDate={highlightedDate}
+              currentYear={currentYear}
+              currentMonth={currentMonth}
+              currentDay={currentDay}
+              onYearChange={handleYearChange}
+              onMonthChange={handleMonthChange}
+              onDayChange={handleDayChange}
+              onManualNavigationStart={handleManualNavigationStart}
+              manualNavigationRef={manualNavigationRef}
+              scrollToDateRef={scrollToDateRef}
+              onHighlightedDate={handleHighlightedDate}
+              isPreviewVisible={!!selectedDoc}
+              selectedDocument={previewData}
+              onClosePreview={handleClosePreview}
+              onScaleChange={handleScaleChange}
+              onModeChange={handleModeChange}
+              onScrub={handleScrub}
+            />
+          )}
+        </MainContentArea>
+      </DashboardContainer>
+    </SearchProvider>
   );
 };
 

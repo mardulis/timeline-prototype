@@ -20,6 +20,7 @@ export interface Doc {
   medications?: string[];
   diagnoses?: string[];
   labs?: string[];
+  flagged?: boolean;
 }
 
 export interface Medication {
@@ -117,6 +118,7 @@ export interface SearchAndControlsProps {
   onManualNavigationStart?: () => void; // Callback when manual navigation starts
   onHighlightedDate?: (date: Date | null) => void; // Callback when date is highlighted
   scrollToDateRef?: React.MutableRefObject<((date: Date) => void) | null>; // Ref to trigger scrolling to specific date
+  isPreviewVisible?: boolean; // Whether document preview panel is visible
 }
 
 export interface DocumentPreviewProps {

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { DocumentPreviewProps } from '../types/Timeline';
 import PDFViewer from './PDFViewer';
+import { useSearch } from '../features/search/SearchCtx';
+import { highlightText } from '../features/search/highlight';
 
 const PreviewContainer = styled.div`
   display: flex;
@@ -283,6 +285,7 @@ const SubstanceItem = styled.div`
 `;
 
 const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) => {
+  const { query } = useSearch();
   const [activeTab, setActiveTab] = useState<'details' | 'pdf'>('details');
   const [openAccordions, setOpenAccordions] = useState<{ [key: string]: boolean }>({
     medications: true,
@@ -409,7 +412,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
             <DocumentIcon>
               <img src="/svg/Document.svg" alt="Document" width="20" height="20" />
             </DocumentIcon>
-            {document.title}
+            {highlightText(document.title, query)}
           </DocumentTitle>
           <CloseButton onClick={onClose}>
             <img src="/svg/Close.svg" alt="Close" width="16" height="16" />
@@ -452,11 +455,11 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
             </MetadataItem>
             <MetadataItem>
               <MetadataLabel>Author</MetadataLabel>
-              <MetadataValue>{document.author || 'N/A'}</MetadataValue>
+              <MetadataValue>{highlightText(document.author || 'N/A', query)}</MetadataValue>
             </MetadataItem>
             <MetadataItem>
               <MetadataLabel>Facility</MetadataLabel>
-              <MetadataValue>{document.facility || 'N/A'}</MetadataValue>
+              <MetadataValue>{highlightText(document.facility || 'N/A', query)}</MetadataValue>
             </MetadataItem>
             <MetadataItem>
               <MetadataLabel>Pages</MetadataLabel>
@@ -469,7 +472,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
               <SectionTitle>Summary</SectionTitle>
               <SummaryContainer>
                 <SummaryText isExpanded={isSummaryExpanded}>
-                  {document.summary}
+                  {highlightText(document.summary, query)}
                 </SummaryText>
                 {needsTruncation(document.summary) && (
                   <SummaryToggleButton onClick={toggleSummary}>
@@ -504,7 +507,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
               <AccordionInner>
                 <SubstanceList>
                   {document.medications.map((med, index) => (
-                    <SubstanceItem key={index}>{med}</SubstanceItem>
+                    <SubstanceItem key={index}>{highlightText(med, query)}</SubstanceItem>
                   ))}
                 </SubstanceList>
               </AccordionInner>
@@ -535,7 +538,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
               <AccordionInner>
                 <SubstanceList>
                   {document.diagnoses.map((diagnosis, index) => (
-                    <SubstanceItem key={index}>{diagnosis}</SubstanceItem>
+                    <SubstanceItem key={index}>{highlightText(diagnosis, query)}</SubstanceItem>
                   ))}
                 </SubstanceList>
               </AccordionInner>
@@ -566,7 +569,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
               <AccordionInner>
                 <SubstanceList>
                   {document.labs.map((lab, index) => (
-                    <SubstanceItem key={index}>{lab}</SubstanceItem>
+                    <SubstanceItem key={index}>{highlightText(lab, query)}</SubstanceItem>
                   ))}
                 </SubstanceList>
               </AccordionInner>

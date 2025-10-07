@@ -83,6 +83,7 @@ const YearlyMinimap: React.FC<YearlyMinimapProps> = ({
   const monthlyData = useMemo(() => {
     const months = [];
     
+    // Always show all 12 months for the current year, regardless of data
     for (let month = 0; month < 12; month++) {
       const monthDocs = docs.filter(doc => {
         const docDate = new Date(doc.date);

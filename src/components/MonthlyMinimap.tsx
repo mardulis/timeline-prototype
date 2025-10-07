@@ -73,7 +73,7 @@ const CustomTooltip = styled.div<{ visible: boolean; x: number; y: number }>`
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
-  z-index: 1000;
+  z-index: 100; /* Higher than timeframe section (z-index: 50) */
   opacity: ${props => props.visible ? 1 : 0};
   visibility: ${props => props.visible ? 'visible' : 'hidden'};
   transition: opacity 0.15s ease;
@@ -93,6 +93,27 @@ const BlueDot = styled.div<{ position: number }>`
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transform: translateX(-50%);
   z-index: 10;
+`;
+
+const DOLIndicator = styled.div<{ position: number }>`
+  position: absolute;
+  bottom: -8px;
+  left: ${props => props.position}px;
+  width: 10px;
+  height: 10px;
+  background: #dc2626; /* Red color for DOL */
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateX(-50%);
+  z-index: 9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #b91c1c; /* Darker red on hover */
+    transform: translateX(-50%) scale(1.2);
+  }
 `;
 
 const MonthLabels = styled.div`
@@ -163,7 +184,7 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
   const yearlyData = useMemo(() => {
     const days = [];
     
-    // Generate all days for all 12 months of the current year
+    // Always generate all days for all 12 months of the current year, regardless of data
     for (let month = 0; month < 12; month++) {
       const daysInMonth = new Date(currentYear, month + 1, 0).getDate();
       
@@ -269,15 +290,15 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
     if (containerRect) {
       // Calculate the center position of the bar relative to the container
       const barCenterX = data.position;
-      const tooltipY = 30; // Raised 10px from 40px to 30px
-        const dateStr = new Date(currentYear, data.month, data.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const tooltipY = 30 + 4; // 30px higher + 4px offset below (within bounds)
+      const dateStr = new Date(currentYear, data.month, data.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       
       // Small delay to prevent flickering
       const timeout = setTimeout(() => {
         setTooltip({
           visible: true,
           x: barCenterX,
-          y: tooltipY, // Set to fixed position near top
+          y: tooltipY, // Fixed position below minimap bottom border
           content: `${dateStr}\n${data.count} documents`
         });
       }, 100);
@@ -319,6 +340,53 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
     });
   }, [yearlyDataWithHeights]);
 
+  // Calculate DOL (Date of Loss) position for March 27, 2020
+  const dolPosition = useMemo(() => {
+    const dolDate = new Date(2020, 2, 27); // March 27, 2020 (month is 0-indexed)
+    const dolYear = dolDate.getFullYear();
+    const dolMonth = dolDate.getMonth();
+    const dolDay = dolDate.getDate();
+    
+    // Only show DOL if we're viewing the year 2020
+    if (currentYear !== dolYear) {
+      return -1;
+    }
+    
+    // Find the position for this date in the yearly data
+    const dolData = yearlyDataWithHeights.find(data => 
+      data.month === dolMonth && data.day === dolDay
+    );
+    
+    return dolData ? dolData.position : -1;
+  }, [yearlyDataWithHeights, currentYear]);
+
+  // DOL tooltip state
+  const [dolTooltip, setDolTooltip] = useState({ visible: false, x: 0, y: 0 });
+
+    const handleDOLMouseEnter = (e: React.MouseEvent) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const rect = e.currentTarget.getBoundingClientRect();
+      const containerRect = e.currentTarget.closest('[data-minimap-container]')?.getBoundingClientRect();
+    
+    if (containerRect) {
+      setDolTooltip({
+        visible: true,
+        x: dolPosition, // Use DOL position directly, same as bar tooltips use data.position
+        y: 30 + 4 // Same fixed position as bar tooltips
+      });
+    }
+  };
+
+  const handleDOLMouseLeave = () => {
+    setDolTooltip({ visible: false, x: 0, y: 0 });
+  };
+
+  const handleDOLClick = () => {
+    // Navigate to March 27, 2020
+    const dolDate = new Date(2020, 2, 27); // March 27, 2020 (month is 0-indexed)
+    onBarClick(dolDate);
+  };
+
   return (
     <MinimapContainer data-minimap-container>
       <MinimapWrapper>
@@ -355,9 +423,29 @@ const MonthlyMinimap: React.FC<MonthlyMinimapProps> = ({
           ))}
         </CustomTooltip>
         
+        {/* DOL tooltip */}
+        <CustomTooltip
+          visible={dolTooltip.visible}
+          x={dolTooltip.x}
+          y={dolTooltip.y}
+        >
+          <div>Date of Loss</div>
+          <div>March 27, 2020</div>
+        </CustomTooltip>
+        
         {/* Blue dot for selected document */}
         {blueDotPosition >= 0 && (
           <BlueDot position={blueDotPosition} />
+        )}
+        
+        {/* DOL indicator for March 27, 2020 */}
+        {dolPosition >= 0 && (
+          <DOLIndicator 
+            position={dolPosition}
+            onMouseEnter={handleDOLMouseEnter}
+            onMouseLeave={handleDOLMouseLeave}
+            onClick={handleDOLClick}
+          />
         )}
       </MinimapWrapper>
       

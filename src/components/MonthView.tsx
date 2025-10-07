@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import styled from 'styled-components';
 import { ViewProps, Doc } from '../types/Timeline';
+import { useSearch } from '../features/search/SearchCtx';
+import { highlightText } from '../features/search/highlight';
 
 const MonthViewContainer = styled.div`
   flex: 1;
@@ -51,14 +53,20 @@ const MonthColumns = styled.div`
 const MonthColumn = styled.div<{ isEmpty?: boolean; isFirst?: boolean; isLast?: boolean }>`
   display: flex;
   flex-direction: column;
-  border-right: none; /* Remove column-level borders - headers handle borders */
   border-bottom: 1px solid #e5e7eb; /* Bottom border for calendar table */
-  border-left: none; /* Remove column-level left border - header handles it */
   border-radius: ${props => {
-    if (props.isFirst && props.isLast) return '0 0 8px 8px'; // Both first and last
+    if (props.isFirst && props.isLast) return '0 0 8px 8px'; // Both first and last - bottom left and right radius
     if (props.isFirst) return '0 0 0 8px'; // Left bottom radius for first column
     if (props.isLast) return '0 0 8px 0'; // Right bottom radius for last column
     return '0';
+  }};
+  border-left: ${props => {
+    if (props.isFirst && props.isLast) return '1px solid #e5e7eb'; /* Solid left border for single column */
+    return 'none'; /* No left border for columns - header handles it */
+  }};
+  border-right: ${props => {
+    if (props.isFirst && props.isLast) return '1px solid #e5e7eb'; /* Solid right border for single column */
+    return 'none'; /* No right border for columns - header handles it */
   }};
   padding: 0; /* Remove padding from column container */
   min-width: ${props => props.isEmpty ? '160px' : '200px'};
@@ -69,24 +77,30 @@ const MonthColumn = styled.div<{ isEmpty?: boolean; isFirst?: boolean; isLast?: 
 
 const ColumnHeader = styled.div<{ isFirst?: boolean; isLast?: boolean; isHighlighted?: boolean }>`
   background: ${props => props.isHighlighted ? '#fef3c7' : '#f8fafc'};
-  border: ${props => props.isHighlighted ? '2px solid #f59e0b' : 'none'};
   font-weight: 600;
   font-size: 16px;
   color: #1f2937;
   padding: 12px 16px;
-  border-radius: ${props => props.isFirst ? '8px 0 0 0' : props.isLast ? '0 8px 0 0' : '0'};
+  border-radius: ${props => {
+    if (props.isFirst && props.isLast) return '8px 8px 0 0'; // Both first and last - top left and right radius
+    if (props.isFirst) return '8px 0 0 0'; // Top left radius for first column
+    if (props.isLast) return '0 8px 0 0'; // Top right radius for last column
+    return '0';
+  }};
   text-align: left;
   border-left: ${props => {
+    if (props.isFirst && props.isLast) return '1px solid #e5e7eb'; /* Solid left border for single column */
     if (props.isFirst) return '1px solid #e5e7eb'; /* Solid left border for first column */
     return '1px solid #e5e7eb'; /* Solid left border for all other columns (including last) */
   }};
   border-right: ${props => {
+    if (props.isFirst && props.isLast) return '1px solid #e5e7eb'; /* Solid right border for single column */
     if (props.isFirst) return 'none'; /* No right border for first column */
     if (props.isLast) return '1px solid #e5e7eb'; /* Solid right border for last column */
     return 'none'; /* No right border for middle columns */
   }};
-  border-top: 1px solid #e5e7eb; /* Add top border */
-  border-bottom: 1px solid #e5e7eb;
+  border-top: ${props => '1px solid #e5e7eb'}; /* Standard top border */
+  border-bottom: ${props => '1px solid #e5e7eb'}; /* Standard bottom border */
   position: sticky;
   top: 0;
   z-index: 30; /* Higher than minimap (z-index: 20) */
@@ -207,6 +221,7 @@ const EmptyColumn = styled.div`
 `;
 
 const MonthView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlightedMonth, highlightedDate, currentYear = 2021 }) => {
+  const { query } = useSearch();
   // Group documents by month for the current year
   const monthGroups = useMemo(() => {
     const groups: { [month: string]: Doc[] } = {};
@@ -293,7 +308,7 @@ const MonthView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlig
                           </DocumentIcon>
                         
                           <DocumentInfo>
-                            <DocumentTitle>{doc.title}</DocumentTitle>
+                            <DocumentTitle>{highlightText(doc.title, query)}</DocumentTitle>
                             <DocumentDate>
                               {new Date(doc.date).toLocaleDateString('en-US', { 
                                 year: 'numeric',

@@ -6,6 +6,7 @@ import MonthView from './MonthView';
 import DayView from './DayView';
 import { CalendarAreaProps, Doc } from '../types/Timeline';
 import { computeRightOcclusionPx } from '../utils/scrollIntoViewOcclusionSafe';
+import { useSearch } from '../features/search/SearchCtx';
 
 const CalendarContainer = styled.div`
   flex: 1;
@@ -57,7 +58,7 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
   scale,
   mode,
   range,
-  docs,
+  docs: originalDocs, // Rename to originalDocs to avoid confusion
   selectedDocId,
   onScaleChange,
   onModeChange,
@@ -76,6 +77,11 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
   scrollToDateRef,
   onHighlightedDate
 }) => {
+  // Use filtered results from search context
+  const { results: filteredDocs } = useSearch();
+  
+  // Use filtered docs for all operations
+  const docs = filteredDocs;
   const [currentYear, setCurrentYear] = useState(propCurrentYear);
   const [currentMonth, setCurrentMonth] = useState(propCurrentMonth);
   const [currentDay, setCurrentDay] = useState(propCurrentDay);

@@ -154,6 +154,44 @@ const validateCSVStructure = (headers: string[]): boolean => {
   return hasAllColumns;
 };
 
+// Global variable to store the generated DOL date
+let globalDOLDate: Date | null = null;
+
+// Function to generate a random DOL within the middle third of the date range
+export const generateRandomDOL = (documents: DocumentData[]): Date => {
+  if (documents.length === 0) {
+    // Fallback to default date if no documents
+    return new Date(2020, 2, 27); // March 27, 2020
+  }
+
+  // Get all dates from documents
+  const dates = documents.map(doc => new Date(doc.date));
+  const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+  const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+  // Calculate the middle third of the date range
+  const totalRange = maxDate.getTime() - minDate.getTime();
+  const oneThird = totalRange / 3;
+  
+  // Middle third starts at 1/3 and ends at 2/3 of the range
+  const middleThirdStart = minDate.getTime() + oneThird;
+  const middleThirdEnd = minDate.getTime() + (oneThird * 2);
+
+  // Generate random date within the middle third
+  const randomTime = middleThirdStart + Math.random() * (middleThirdEnd - middleThirdStart);
+  const randomDOL = new Date(randomTime);
+
+  // Store globally for use by minimap components
+  globalDOLDate = randomDOL;
+  
+  return randomDOL;
+};
+
+// Function to get the current DOL date
+export const getDOLDate = (): Date => {
+  return globalDOLDate || new Date(2020, 2, 27); // Fallback to default
+};
+
 // Parse CSV content
 export const parseCSV = (csvContent: string): DocumentData[] => {
   // Split by lines but handle multi-line quoted fields
