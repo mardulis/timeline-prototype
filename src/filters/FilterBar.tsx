@@ -1098,7 +1098,38 @@ export function FilterBar() {
                 quickFilterRefs.current[filter.key] = el;
               }}
               onClick={() => {
-                setActiveQuickFilter(activeQuickFilter === filter.key ? null : filter.key);
+                // Create pill immediately and show values menu - same behavior as More filters
+                if (filter.key === 'author') {
+                  // Author filter - create pill without value, mark as newly created
+                  setNewlyCreatedPills(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add('author');
+                    return newSet;
+                  });
+                  // Add to creation order and create empty filter
+                  const newFilters = addToCreationOrder('author', { ...filters, author: { values: [] } });
+                  setFilters(newFilters);
+                } else if (filter.key === 'facility') {
+                  // Facility filter - create pill without value, mark as newly created
+                  setNewlyCreatedPills(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add('facility');
+                    return newSet;
+                  });
+                  // Add to creation order and create empty filter
+                  const newFilters = addToCreationOrder('facility', { ...filters, facility: { values: [] } });
+                  setFilters(newFilters);
+                } else if (filter.key === 'medical') {
+                  // Medical Entity filter - create pill without value, mark as newly created
+                  setNewlyCreatedPills(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add('medical');
+                    return newSet;
+                  });
+                  // Add to creation order and create empty filter
+                  const newFilters = addToCreationOrder('medical', { ...filters, medical: { medications: [], diagnoses: [], labs: [] } });
+                  setFilters(newFilters);
+                }
               }}
             >
               <img src={filter.icon} alt={filter.label} width="16" height="16" />
