@@ -325,3 +325,5 @@ export default function FilterRulePill(props: FilterRulePillProps) {
     </div>
   );
 }
+
+export default FilterRulePill;
