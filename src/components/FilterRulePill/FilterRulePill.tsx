@@ -326,4 +326,3 @@ export default function FilterRulePill(props: FilterRulePillProps) {
   );
 }
 
-export default FilterRulePill;

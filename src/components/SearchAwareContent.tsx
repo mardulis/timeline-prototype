@@ -161,4 +161,3 @@ export function SearchAwareContent({
   );
 }
 
-export { SearchAwareContent };
