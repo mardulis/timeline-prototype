@@ -35,7 +35,7 @@ const CalendarSection = styled.div`
   overflow-y: auto; /* Enable vertical scrolling */
   display: flex;
   flex-direction: column;
-  margin-top: 120px; /* Increased space for fixed minimap (was 80px) */
+  margin-top: 94px; /* Space for fixed minimap + gap (minimap: 16+32+8+20+6=82px, gap: 12px) */
   margin-bottom: 40px; /* Space for fixed footer */
   z-index: 10; /* Below document preview panel (z-index: 35) */
 `;
@@ -575,9 +575,11 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
       }
       
       // Scroll to first document based on scale (immediate execution for faster response)
+      // Skip vertical scrolling for year view to maintain user's scroll position
       switch (scale) {
         case 'year':
-          scrollToFirstDocumentInYear(targetYear, targetMonth);
+          // Only horizontal scrolling and highlighting for year view
+          // Vertical scroll removed to preserve user's position
           break;
         case 'month':
           scrollToFirstDocumentInDay(targetYear, targetMonth, targetDay);
@@ -1073,6 +1075,9 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
           currentYear={currentYear}
           currentMonth={currentMonth}
           isPreviewVisible={isPreviewVisible}
+          onScaleChange={onScaleChange}
+          onYearChange={onYearChange}
+          onMonthChange={onMonthChange}
           onYearClick={(year) => {
             isManualNavigationRef.current = true;
             setCurrentYear(year);

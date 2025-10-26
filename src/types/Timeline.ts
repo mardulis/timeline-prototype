@@ -95,6 +95,9 @@ export interface ActivityHistogramProps {
   onYearClick?: (year: number) => void;
   onMonthClick?: (month: number) => void;
   onDayClick?: (day: number) => void;
+  onScaleChange?: (scale: TimeScale) => void; // For switching timeframes from label clicks
+  onYearChange?: (year: number) => void; // For updating current year context
+  onMonthChange?: (month: number) => void; // For updating current month context
 }
 
 export interface TopPanelProps {

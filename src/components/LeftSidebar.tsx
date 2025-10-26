@@ -1,6 +1,10 @@
 import React from 'react';
 import styled from 'styled-components';
 
+interface LeftSidebarProps {
+  onNavigateToPulse?: () => void;
+}
+
 const SidebarContainer = styled.div`
   width: 64px;
   background: white;
@@ -15,12 +19,25 @@ const SidebarContainer = styled.div`
   z-index: 10;
 `;
 
-const LogoContainer = styled.div`
+const LogoContainer = styled.button`
   width: 44px;
   height: 44px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+
+  &:active {
+    background: #e5e7eb;
+  }
 `;
 
 const Logo = styled.img`
@@ -29,10 +46,10 @@ const Logo = styled.img`
   object-fit: contain;
 `;
 
-const LeftSidebar: React.FC = () => {
+const LeftSidebar: React.FC<LeftSidebarProps> = ({ onNavigateToPulse }) => {
   return (
     <SidebarContainer>
-      <LogoContainer>
+      <LogoContainer onClick={onNavigateToPulse} title="Pulse">
         <Logo src="/svg/WD logo blue.svg" alt="WD Logo" />
       </LogoContainer>
     </SidebarContainer>

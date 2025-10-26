@@ -16,7 +16,7 @@ const DayGrid = styled.div`
   flex: 1;
   overflow-x: auto; /* Enable horizontal scrolling */
   overflow-y: auto; /* Allow vertical scrolling for columns */
-  padding: 16px 24px;
+  padding: 6px 24px 16px 24px; /* 6px top, 24px left/right, 16px bottom */
   scroll-behavior: auto; /* Precise positioning for programmatic scrolling */
   display: flex;
   border-radius: 8px;

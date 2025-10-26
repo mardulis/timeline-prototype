@@ -28,12 +28,15 @@ const SearchInputContainer = styled.div`
 
 const SearchInput = styled.input`
   width: 100%;
+  height: 36px;
   padding: 8px 40px 8px 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px; /* Updated to radius 10 */
+  border-radius: 10px;
   font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
-  color: #374151;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #1f2937;
   background: #ffffff;
   
   &:focus {
@@ -43,7 +46,7 @@ const SearchInput = styled.input`
   }
   
   &::placeholder {
-    color: #9CA3AF;
+    color: #9ca3af;
   }
 `;
 
@@ -75,13 +78,16 @@ const SearchClearButton = styled.button`
 `;
 
 const FiltersButton = styled.button<{ hasFilters: boolean }>`
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
+  height: 32px;
   padding: 8px 12px;
-  background: ${props => props.hasFilters ? '#E5E7EB' : '#ffffff'};
-  border: ${props => props.hasFilters ? 'none' : '1px solid #e5e7eb'};
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 10px;
+  box-shadow: none;
   font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 13px;
   font-weight: 500;
@@ -89,13 +95,37 @@ const FiltersButton = styled.button<{ hasFilters: boolean }>`
   cursor: pointer;
   transition: all 0.2s ease;
   
+  img {
+    width: 16px;
+    height: 16px;
+  }
+  
   &:hover {
-    background: ${props => props.hasFilters ? '#D1D5DB' : '#f9fafb'};
+    background: #f9fafb;
   }
   
   &:active {
-    background: ${props => props.hasFilters ? '#9CA3AF' : '#f3f4f6'};
+    background: #f3f4f6;
   }
+`;
+
+const FilterBadge = styled.div`
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2582ff;
+  color: #ffffff;
+  border-radius: 10px;
+  font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
 `;
 
 const FilterRow = styled.div<{ isVisible: boolean }>`
@@ -215,28 +245,41 @@ const ActionsContainer = styled.div`
 `;
 
 const QuickFilterButton = styled.button`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
   height: 32px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  padding: 6px 12px; /* Figma: 6px top/bottom, 12px left/right */
   border-radius: 10px;
-  font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border: 1px dashed #d1d5db; /* Figma: var(--border/default/secondary) */
+  background: #ffffff;
+  color: #1f2937; /* Figma: var(--text/default/default) */
   font-size: 13px;
-  font-weight: 500;
-  color: #374151;
+  font-weight: 400;
+  line-height: 1.4; /* Figma line-height */
+  font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
   
   &:hover {
     background: #f9fafb;
-    border-color: #d1d5db;
+    border-color: #9ca3af;
   }
   
-  &:active {
-    background: #f3f4f6;
+  img {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    /* Figma: icon color #1f2937 (var(--text/default/default)) */
+    filter: brightness(0) saturate(100%) invert(11%) sepia(8%) saturate(1567%) hue-rotate(183deg) brightness(96%) contrast(93%);
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-left: auto;
   }
 `;
 
@@ -332,7 +375,7 @@ const QuickFilterMenuItem = styled.button<{ isSelected?: boolean }>`
 
 
 export function FilterBar() {
-  const { filters, setFilters, results, clearFilters, query, setQuery } = useSearch();
+  const { filters, setFilters, results, allDocs, clearFilters, query, setQuery } = useSearch();
   const [newlyCreatedPills, setNewlyCreatedPills] = useState<Set<string>>(new Set());
   const { setOpenDropdown } = useDropdown();
   
@@ -343,6 +386,17 @@ export function FilterBar() {
   const [menuSearchQuery, setMenuSearchQuery] = React.useState<string>('');
   const [showFilterSection, setShowFilterSection] = React.useState<boolean>(false);
   const quickFilterRefs = React.useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  const quickFilterScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const quickFilterScrollPosition = React.useRef<number>(0);
+  const isTogglingQuickFilter = React.useRef<boolean>(false);
+  
+  // Ref callback that restores scroll immediately on remount during toggle
+  const setQuickFilterScrollRef = React.useCallback((node: HTMLDivElement | null) => {
+    quickFilterScrollRef.current = node;
+    if (node && isTogglingQuickFilter.current) {
+      node.scrollTop = quickFilterScrollPosition.current;
+    }
+  }, []);
   
   // Keep newly created pills visible until refresh - no need to clear them when they get values
   
@@ -469,8 +523,19 @@ export function FilterBar() {
   React.useEffect(() => {
     if (activeQuickFilter) {
       setMenuSearchQuery('');
+      quickFilterScrollPosition.current = 0; // Reset scroll when opening new menu
     }
   }, [activeQuickFilter]);
+  
+  // Restore scroll position after toggle (runs after commit, before paint)
+  React.useLayoutEffect(() => {
+    if (!isTogglingQuickFilter.current) return;
+    const el = quickFilterScrollRef.current;
+    if (el) {
+      el.scrollTop = quickFilterScrollPosition.current;
+    }
+    isTogglingQuickFilter.current = false;
+  }, [filters.diagnoses, filters.medications, filters.medical]);
   
   // Initialize URL state management
   // useURLState(); // Temporarily disabled to test
@@ -555,6 +620,56 @@ export function FilterBar() {
     ].sort();
   }, []);
   
+  // Get all possible medications (from ALL documents, not filtered results)
+  const allPossibleMedications = React.useMemo(() => {
+    const medications = new Set<string>();
+    allDocs.forEach(doc => {
+      if (doc.medications && doc.medications.length > 0) {
+        doc.medications.forEach(med => medications.add(med));
+      }
+    });
+    return Array.from(medications).sort();
+  }, [allDocs]);
+  
+  // Get all possible diagnoses (from ALL documents, not filtered results)
+  const allPossibleDiagnoses = React.useMemo(() => {
+    const diagnoses = new Set<string>();
+    allDocs.forEach(doc => {
+      if (doc.diagnoses && doc.diagnoses.length > 0) {
+        doc.diagnoses.forEach(diag => diagnoses.add(diag));
+      }
+    });
+    return Array.from(diagnoses).sort();
+  }, [allDocs]);
+  
+  // Get all possible labs (from ALL documents, not filtered results)
+  const allPossibleLabs = React.useMemo(() => {
+    const labs = new Set<string>();
+    allDocs.forEach(doc => {
+      if (doc.labs && doc.labs.length > 0) {
+        doc.labs.forEach(lab => labs.add(lab));
+      }
+    });
+    return Array.from(labs).sort();
+  }, [allDocs]);
+  
+  // Memoize the mapped value objects to prevent re-creating them on every render
+  // This is CRITICAL for scroll position preservation in dropdowns
+  const medicationValues = React.useMemo(
+    () => allPossibleMedications.map(med => ({ id: med, label: med })),
+    [allPossibleMedications]
+  );
+  
+  const diagnosisValues = React.useMemo(
+    () => allPossibleDiagnoses.map(diag => ({ id: diag, label: diag })),
+    [allPossibleDiagnoses]
+  );
+  
+  const labValues = React.useMemo(
+    () => allPossibleLabs.map(lab => ({ id: lab, label: lab })),
+    [allPossibleLabs]
+  );
+  
   // Helper function to add a filter to creation order
   const addToCreationOrder = (filterKey: string, newFilters: any) => {
     const currentOrder = newFilters.creationOrder || [];
@@ -603,6 +718,18 @@ export function FilterBar() {
           // Always show docType filter if it's in creation order, even if empty
           activeFilters.push({ key: 'docType', type: 'docType', data: filters.docType || { values: [] } });
           break;
+        case 'medications':
+          // Always show medications filter if it's in creation order, even if empty
+          activeFilters.push({ key: 'medications', type: 'medications', data: filters.medications || { values: [] } });
+          break;
+        case 'diagnoses':
+          // Always show diagnoses filter if it's in creation order, even if empty
+          activeFilters.push({ key: 'diagnoses', type: 'diagnoses', data: filters.diagnoses || { values: [] } });
+          break;
+        case 'labs':
+          // Always show labs filter if it's in creation order, even if empty
+          activeFilters.push({ key: 'labs', type: 'labs', data: filters.labs || { values: [] } });
+          break;
       }
     });
 
@@ -623,15 +750,24 @@ export function FilterBar() {
   };
   
   const handleMedicalChange = (medicalValue: { medications?: string[]; diagnoses?: string[]; labs?: string[] }) => {
-    const newFilters = { ...filters, medical: medicalValue };
     if (medicalValue.medications?.length || medicalValue.diagnoses?.length || medicalValue.labs?.length) {
-      // Adding or updating medical filter
-      const updatedFilters = addToCreationOrder('medical', newFilters);
-      setFilters({ ...updatedFilters, medical: { ...medicalValue, createdAt: Date.now() } });
+      // Adding or updating medical filter - preserve ALL existing filters
+      setFilters(prevFilters => {
+        const newFilters = { 
+          ...prevFilters,
+          medical: medicalValue 
+        };
+        return addToCreationOrder('medical', newFilters);
+      });
     } else {
-      // Removing medical filter
-      const updatedFilters = removeFromCreationOrder('medical', newFilters);
-      setFilters(updatedFilters);
+      // Removing medical filter - preserve ALL existing filters
+      setFilters(prevFilters => {
+        const newFilters = { 
+          ...prevFilters,
+          medical: medicalValue 
+        };
+        return removeFromCreationOrder('medical', newFilters);
+      });
     }
   };
   
@@ -711,6 +847,91 @@ export function FilterBar() {
     setFilters(newFilters);
   };
   
+  // Individual medication/diagnosis/lab filter handlers (separate from Medical Entity)
+  const handleMedicationsChange = (medicationValues: string[]) => {
+    const operator = medicationValues.length === 1 ? 'is' : 'is-any-of';
+    
+    if (medicationValues.length > 0) {
+      setFilters(prevFilters => {
+        const newFilters = { 
+          ...prevFilters, 
+          medications: { values: medicationValues, operator } 
+        };
+        return addToCreationOrder('medications', newFilters);
+      });
+    } else {
+      setFilters(prevFilters => {
+        const newFilters = { 
+          ...prevFilters, 
+          medications: { values: medicationValues, operator } 
+        };
+        return removeFromCreationOrder('medications', newFilters);
+      });
+    }
+  };
+  
+  const handleDiagnosesChange = (diagnosisValues: string[]) => {
+    const operator = diagnosisValues.length === 1 ? 'is' : 'is-any-of';
+    
+    if (diagnosisValues.length > 0) {
+      setFilters(prevFilters => {
+        const newFilters = { 
+          ...prevFilters, 
+          diagnoses: { values: diagnosisValues, operator } 
+        };
+        return addToCreationOrder('diagnoses', newFilters);
+      });
+    } else {
+      setFilters(prevFilters => {
+        const newFilters = { 
+          ...prevFilters, 
+          diagnoses: { values: diagnosisValues, operator } 
+        };
+        return removeFromCreationOrder('diagnoses', newFilters);
+      });
+    }
+  };
+  
+  const handleLabsChange = (labValues: string[]) => {
+    const operator = labValues.length === 1 ? 'is' : 'is-any-of';
+    const newFilters = { 
+      ...filters, 
+      labs: { values: labValues, operator } 
+    };
+    if (labValues.length > 0) {
+      const updatedFilters = addToCreationOrder('labs', newFilters);
+      setFilters(updatedFilters);
+    } else {
+      const updatedFilters = removeFromCreationOrder('labs', newFilters);
+      setFilters(updatedFilters);
+    }
+  };
+  
+  // Operator change handlers for new filters
+  const handleMedicationsOperatorChange = (operator: string) => {
+    const newFilters = { 
+      ...filters, 
+      medications: { ...filters.medications, operator } 
+    };
+    setFilters(newFilters);
+  };
+  
+  const handleDiagnosesOperatorChange = (operator: string) => {
+    const newFilters = { 
+      ...filters, 
+      diagnoses: { ...filters.diagnoses, operator } 
+    };
+    setFilters(newFilters);
+  };
+  
+  const handleLabsOperatorChange = (operator: string) => {
+    const newFilters = { 
+      ...filters, 
+      labs: { ...filters.labs, operator } 
+    };
+    setFilters(newFilters);
+  };
+  
   
   const hasActiveFilters = !!(
     (filters.date?.start || filters.date?.end) || 
@@ -724,54 +945,9 @@ export function FilterBar() {
   );
   
   
-  // Define quick filters (always visible when no active filters)
+  // Define pinned quick filters (always visible in fixed positions)
+  // New pinned filters: Medical Entity, Diagnosis, Medication
   const quickFilters = React.useMemo(() => [
-    { 
-      key: 'author', 
-      label: 'Author',
-      icon: '/svg/profile.svg',
-      operators: [
-        { id: 'is', label: 'Is' },
-        { id: 'is-any-of', label: 'Is any of' }
-      ],
-      values: allPossibleAuthors.map(author => ({ id: author, label: author })),
-      value: null, // Always null for quick filters
-      onValueChange: (value: string[] | string | null) => {
-        // For multiselect, add the new value to existing selection
-        const currentAuthors = filters.author?.values || [];
-        const newValue = Array.isArray(value) ? value[0] : value;
-        if (newValue && !currentAuthors.includes(newValue)) {
-          handleAuthorChange([...currentAuthors, newValue]);
-        } else if (newValue && currentAuthors.includes(newValue)) {
-          // Remove if already selected
-          handleAuthorChange(currentAuthors.filter(a => a !== newValue));
-        }
-      },
-      onClear: () => handleAuthorChange([])
-    },
-    { 
-      key: 'facility', 
-      label: 'Facility',
-      icon: '/svg/View.svg',
-      operators: [
-        { id: 'is', label: 'Is' },
-        { id: 'is-any-of', label: 'Is any of' }
-      ],
-      values: allPossibleFacilities.map(facility => ({ id: facility, label: facility })),
-             value: null, // Always null for quick filters
-      onValueChange: (value: string[] | string | null) => {
-        // For multiselect, add the new value to existing selection
-        const currentFacilities = filters.facility?.values || [];
-        const newValue = Array.isArray(value) ? value[0] : value;
-        if (newValue && !currentFacilities.includes(newValue)) {
-          handleFacilityChange([...currentFacilities, newValue]);
-        } else if (newValue && currentFacilities.includes(newValue)) {
-          // Remove if already selected
-          handleFacilityChange(currentFacilities.filter(f => f !== newValue));
-        }
-      },
-      onClear: () => handleFacilityChange([])
-    },
     { 
       key: 'medical', 
       label: 'Medical Entity',
@@ -785,70 +961,77 @@ export function FilterBar() {
         { id: 'diagnoses', label: 'Diagnoses' },
         { id: 'labs', label: 'Labs' }
       ],
-      value: null, // Always null for quick filters
-      onValueChange: (value: string[] | string | null) => {
-        // For multiselect, add the new value to existing selection
-        const currentMedical = filters.medical || { medications: [], diagnoses: [], labs: [] };
-        const newValue = Array.isArray(value) ? value[0] : value;
+      value: null,
+      onValueChange: (value: string | null) => {
+        // Medical filter - multiselect categories
+        const medical = filters.medical || { medications: [], diagnoses: [], labs: [] };
+        const category = value as string;
         
-        if (newValue === 'medications') {
-          const currentMeds = currentMedical.medications || [];
-          if (currentMeds.length === 0) {
-            // Add some sample medications if none exist
-            handleMedicalChange({ 
-              ...currentMedical, 
-              medications: ['Aspirin', 'Metformin'] 
-            });
-          } else {
-            // Remove medications if already selected
-            handleMedicalChange({ 
-              ...currentMedical, 
-              medications: [] 
-            });
-          }
-        } else if (newValue === 'diagnoses') {
-          const currentDiag = currentMedical.diagnoses || [];
-          if (currentDiag.length === 0) {
-            // Add some sample diagnoses if none exist
-            handleMedicalChange({ 
-              ...currentMedical, 
-              diagnoses: ['Diabetes', 'Hypertension'] 
-            });
-          } else {
-            // Remove diagnoses if already selected
-            handleMedicalChange({ 
-              ...currentMedical, 
-              diagnoses: [] 
-            });
-          }
-        } else if (newValue === 'labs') {
-          const currentLabs = currentMedical.labs || [];
-          if (currentLabs.length === 0) {
-            // Add some sample labs if none exist
-            handleMedicalChange({ 
-              ...currentMedical, 
-              labs: ['Blood Test', 'Urine Test'] 
-            });
-          } else {
-            // Remove labs if already selected
-            handleMedicalChange({ 
-              ...currentMedical, 
-              labs: [] 
-            });
-          }
+        // Toggle the category
+        if (category === 'medications') {
+          const newMedications = medical.medications?.length ? [] : ['Aspirin', 'Metformin'];
+          handleMedicalChange({ ...medical, medications: newMedications });
+        } else if (category === 'diagnoses') {
+          const newDiagnoses = medical.diagnoses?.length ? [] : ['Diabetes', 'Hypertension'];
+          handleMedicalChange({ ...medical, diagnoses: newDiagnoses });
+        } else if (category === 'labs') {
+          const newLabs = medical.labs?.length ? [] : ['Blood Test', 'Urine Test'];
+          handleMedicalChange({ ...medical, labs: newLabs });
         }
       },
       onClear: () => handleMedicalChange({})
+    },
+    { 
+      key: 'diagnoses', 
+      label: 'Diagnosis',
+      icon: '/svg/Diagnosis.svg',
+      operators: [
+        { id: 'is', label: 'Is' },
+        { id: 'is-any-of', label: 'Is any of' }
+      ],
+      values: allPossibleDiagnoses.map(diag => ({ id: diag, label: diag })),
+      value: null,
+      onValueChange: (value: string | null) => {
+        // Diagnosis filter - multiselect
+        const currentDiagnoses = filters.diagnoses?.values || [];
+        const diagnosisId = value as string;
+        const newDiagnoses = currentDiagnoses.includes(diagnosisId)
+          ? currentDiagnoses.filter(d => d !== diagnosisId)
+          : [...currentDiagnoses, diagnosisId];
+        handleDiagnosesChange(newDiagnoses);
+      },
+      onClear: () => handleDiagnosesChange([])
+    },
+    { 
+      key: 'medications', 
+      label: 'Medication',
+      icon: '/svg/Medications.svg',
+      operators: [
+        { id: 'is', label: 'Is' },
+        { id: 'is-any-of', label: 'Is any of' }
+      ],
+      values: allPossibleMedications.map(med => ({ id: med, label: med })),
+      value: null,
+      onValueChange: (value: string | null) => {
+        // Medication filter - multiselect
+        const currentMedications = filters.medications?.values || [];
+        const medicationId = value as string;
+        const newMedications = currentMedications.includes(medicationId)
+          ? currentMedications.filter(m => m !== medicationId)
+          : [...currentMedications, medicationId];
+        handleMedicationsChange(newMedications);
+      },
+      onClear: () => handleMedicationsChange([])
     }
-  ], [allPossibleAuthors, allPossibleFacilities, filters.author?.values, filters.facility?.values, filters.medical, handleAuthorChange, handleFacilityChange, handleMedicalChange]);
+  ], [allPossibleDiagnoses, allPossibleMedications, filters.medical, filters.diagnoses?.values, filters.medications?.values]);
   
   // Auto-focus search input when menu opens
   React.useEffect(() => {
     if (menuVisible && activeQuickFilter) {
       const filter = quickFilters.find(f => f.key === activeQuickFilter);
       if (filter) {
-        const shouldShowSearch = (filter.key === 'facility' && allPossibleFacilities.length > 5) ||
-                               (filter.key === 'author' && allPossibleAuthors.length > 5) ||
+        const shouldShowSearch = (filter.key === 'diagnoses' && allPossibleDiagnoses.length > 5) ||
+                               (filter.key === 'medications' && allPossibleMedications.length > 5) ||
                                (filter.key === 'docType' && allPossibleTypes.length > 5);
         
         if (shouldShowSearch) {
@@ -862,54 +1045,27 @@ export function FilterBar() {
         }
       }
     }
-  }, [menuVisible, activeQuickFilter, allPossibleFacilities.length, allPossibleAuthors.length, allPossibleTypes.length, quickFilters]);
+  }, [menuVisible, activeQuickFilter, allPossibleDiagnoses.length, allPossibleMedications.length, allPossibleTypes.length, quickFilters]);
   
   // Handle filter section toggle
   const handleFilterSectionToggle = () => {
     setShowFilterSection(!showFilterSection);
   };
   
-  // Get filters that are not currently active as pills
+  // Get filters for More Filters menu (excludes pinned filters: Medical Entity, Diagnosis, Medication)
+  // Also excludes Date filter per user request
   const getMoreFilters = () => {
     const activeFilterKeys = new Set();
     
     // Check which filters are currently active
-    if (filters.date?.start || filters.date?.end) activeFilterKeys.add('date');
-    if (filters.facility?.values?.length) activeFilterKeys.add('facility');
-    if (filters.medical?.medications?.length || filters.medical?.diagnoses?.length || filters.medical?.labs?.length) activeFilterKeys.add('medical');
-    if (filters.author?.values?.length) activeFilterKeys.add('author');
     if (filters.docType?.values?.length) activeFilterKeys.add('docType');
+    if (filters.author?.values?.length) activeFilterKeys.add('author');
+    if (filters.facility?.values?.length) activeFilterKeys.add('facility');
+    if (filters.labs?.values?.length) activeFilterKeys.add('labs');
     
-    // When quick filters are visible (no active filters), show all available filters in More filters
-    if (!hasActiveFilters) {
-      // Add additional filters that are always available in More filters menu
-      const additionalFilters = [
-        {
-          key: 'docType',
-          label: 'Doc type',
-          icon: '/svg/Document.svg',
-          type: 'multiselect' as const,
-          values: allPossibleTypes.map(type => ({ id: type, label: type })),
-          onValueChange: (valueId: string) => {
-            const currentTypes = filters.docType?.values || [];
-            const newTypes = currentTypes.includes(valueId) 
-              ? currentTypes.filter(t => t !== valueId)
-              : [...currentTypes, valueId];
-            handleDocTypeChange(newTypes);
-          },
-          onClear: () => handleDocTypeChange([])
-        }
-      ];
-      
-      // Return all quick filters plus additional filters when no filters are active
-      return [...quickFilters, ...additionalFilters];
-    }
-    
-    // When filters are active, only show inactive filters
-    const inactiveQuickFilters = quickFilters.filter(filter => !activeFilterKeys.has(filter.key));
-    
-    // Add additional filters that are always available in More filters menu
-    const additionalFilters = [
+    // Define all available filters for More Filters menu
+    // NOTE: Pinned filters (Medical Entity, Diagnosis, Medication) and Date are NOT included here
+    const allAvailableFilters = [
       {
         key: 'docType',
         label: 'Doc type',
@@ -919,19 +1075,61 @@ export function FilterBar() {
         onValueChange: (valueId: string) => {
           const currentTypes = filters.docType?.values || [];
           const newTypes = currentTypes.includes(valueId) 
-            ? currentTypes.filter(t => t !== valueId)
+            ? currentTypes.filter((t: string) => t !== valueId)
             : [...currentTypes, valueId];
           handleDocTypeChange(newTypes);
         },
         onClear: () => handleDocTypeChange([])
+      },
+      {
+        key: 'author',
+        label: 'Author',
+        icon: '/svg/profile.svg',
+        type: 'multiselect' as const,
+        values: allPossibleAuthors.map(author => ({ id: author, label: author })),
+        onValueChange: (valueId: string) => {
+          const currentAuthors = filters.author?.values || [];
+          const newAuthors = currentAuthors.includes(valueId) 
+            ? currentAuthors.filter((a: string) => a !== valueId)
+            : [...currentAuthors, valueId];
+          handleAuthorChange(newAuthors);
+        },
+        onClear: () => handleAuthorChange([])
+      },
+      {
+        key: 'facility',
+        label: 'Facility',
+        icon: '/svg/View.svg',
+        type: 'multiselect' as const,
+        values: allPossibleFacilities.map(facility => ({ id: facility, label: facility })),
+        onValueChange: (valueId: string) => {
+          const currentFacilities = filters.facility?.values || [];
+          const newFacilities = currentFacilities.includes(valueId) 
+            ? currentFacilities.filter((f: string) => f !== valueId)
+            : [...currentFacilities, valueId];
+          handleFacilityChange(newFacilities);
+        },
+        onClear: () => handleFacilityChange([])
+      },
+      {
+        key: 'labs',
+        label: 'Labs',
+        icon: '/svg/Labs.svg',
+        type: 'multiselect' as const,
+        values: allPossibleLabs.map(lab => ({ id: lab, label: lab })),
+        onValueChange: (valueId: string) => {
+          const currentLabs = filters.labs?.values || [];
+          const newLabs = currentLabs.includes(valueId) 
+            ? currentLabs.filter((l: string) => l !== valueId)
+            : [...currentLabs, valueId];
+          handleLabsChange(newLabs);
+        },
+        onClear: () => handleLabsChange([])
       }
     ];
     
-    // Filter out active additional filters
-    const inactiveAdditionalFilters = additionalFilters.filter(filter => !activeFilterKeys.has(filter.key));
-    
-    // Combine inactive quick filters with inactive additional filters
-    return [...inactiveQuickFilters, ...inactiveAdditionalFilters];
+    // Filter out active filters
+    return allAvailableFilters.filter(filter => !activeFilterKeys.has(filter.key));
   };
   
   const moreFilters = getMoreFilters();
@@ -963,14 +1161,137 @@ export function FilterBar() {
             >
               <img src="/svg/filterMailCircleStrokeRounded.svg" alt="Filters" width="16" height="16" />
               Filters
+              {getActiveFiltersInOrder().length > 0 && (
+                <FilterBadge>{getActiveFiltersInOrder().length}</FilterBadge>
+              )}
             </FiltersButton>
           </SearchRow>
           
           {/* Filter pills row */}
           <FilterRow isVisible={showFilterSection}>
             <FilterPillsContainer>
-          {/* Show active filter pills in creation order */}
-          {getActiveFiltersInOrder().map(filter => {
+          {/* Render pinned filters in fixed positions (Medical Entity, Diagnosis, Medication) */}
+          {/* Each position shows either a dashed button (no value) or a pill (has value) */}
+          {quickFilters.map(filter => {
+            // Check if this filter has a value
+            let hasValue = false;
+            let activeFilter = null;
+            
+            if (filter.key === 'medical') {
+              const medical = filters.medical || { medications: [], diagnoses: [], labs: [] };
+              hasValue = (medical.medications?.length || 0) > 0 || 
+                        (medical.diagnoses?.length || 0) > 0 || 
+                        (medical.labs?.length || 0) > 0;
+              if (hasValue) {
+                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'medical');
+              }
+            } else if (filter.key === 'diagnoses') {
+              hasValue = (filters.diagnoses?.values || []).length > 0;
+              if (hasValue) {
+                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'diagnoses');
+              }
+            } else if (filter.key === 'medications') {
+              hasValue = (filters.medications?.values || []).length > 0;
+              if (hasValue) {
+                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'medications');
+              }
+            }
+            
+            // If filter has a value, render the pill in this position
+            if (hasValue && activeFilter) {
+              if (filter.key === 'medical') {
+                return (
+                  <FilterRulePill
+                    key={`medical-${JSON.stringify(activeFilter.data)}`}
+                    label="Medical Entity"
+                    icon={<img src="/svg/cells.svg" alt="Medical Entity" width="16" height="16" />}
+                    operators={[
+                      { id: 'has', label: 'Has' },
+                      { id: 'has-any-of', label: 'Has any of' }
+                    ]}
+                    values={[
+                      { id: 'medications', label: 'Medications' },
+                      { id: 'diagnoses', label: 'Diagnoses' },
+                      { id: 'labs', label: 'Labs' }
+                    ]}
+                    value={(() => {
+                      const medical = activeFilter.data || { medications: [], diagnoses: [], labs: [] };
+                      const selectedValues = [];
+                      if (medical.medications?.length) selectedValues.push('medications');
+                      if (medical.diagnoses?.length) selectedValues.push('diagnoses');
+                      if (medical.labs?.length) selectedValues.push('labs');
+                      return selectedValues;
+                    })()}
+                    multiple={true}
+                    onValueChange={(value: string[] | string | null) => {
+                      const selectedCategories = value as string[] || [];
+                      const medications = selectedCategories.includes('medications') ? ['Aspirin', 'Metformin'] : [];
+                      const diagnoses = selectedCategories.includes('diagnoses') ? ['Diabetes', 'Hypertension'] : [];
+                      const labs = selectedCategories.includes('labs') ? ['Blood Test', 'Urine Test'] : [];
+                      handleMedicalChange({ medications, diagnoses, labs });
+                    }}
+                    onClear={() => handleMedicalChange({})}
+                    openValueMenuInitially={newlyCreatedPills.has('medical')}
+                  />
+                );
+              } else if (filter.key === 'diagnoses') {
+                return (
+                  <MultiselectFilter
+                    key="diagnoses"
+                    label="Diagnosis"
+                    icon={<img src="/svg/Diagnosis.svg" alt="Diagnosis" width="16" height="16" />}
+                    values={allPossibleDiagnoses.map(diag => ({ id: diag, label: diag }))}
+                    selectedValues={activeFilter.data?.values || []}
+                    onValueChange={handleDiagnosesChange}
+                    onClear={() => handleDiagnosesChange([])}
+                    onOperatorChange={handleDiagnosesOperatorChange}
+                    openValueMenuInitially={newlyCreatedPills.has('diagnoses')}
+                  />
+                );
+              } else if (filter.key === 'medications') {
+                return (
+                  <MultiselectFilter
+                    key="medications"
+                    label="Medication"
+                    icon={<img src="/svg/Medications.svg" alt="Medication" width="16" height="16" />}
+                    values={allPossibleMedications.map(med => ({ id: med, label: med }))}
+                    selectedValues={activeFilter.data?.values || []}
+                    onValueChange={handleMedicationsChange}
+                    onClear={() => handleMedicationsChange([])}
+                    onOperatorChange={handleMedicationsOperatorChange}
+                    openValueMenuInitially={newlyCreatedPills.has('medications')}
+                  />
+                );
+              }
+            }
+            
+            // If filter has no value, render the dashed button in this position
+            return (
+              <QuickFilterButton
+                key={filter.key}
+                ref={(el) => {
+                  quickFilterRefs.current[filter.key] = el;
+                }}
+                onClick={() => {
+                  // Toggle dropdown menu for this filter
+                  if (activeQuickFilter === filter.key) {
+                    setActiveQuickFilter(null);
+                  } else {
+                    setActiveQuickFilter(filter.key);
+                  }
+                }}
+              >
+                <img src={filter.icon} alt={filter.label} width="16" height="16" />
+                {filter.label}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 'auto' }}>
+                  <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </QuickFilterButton>
+            );
+          })}
+          
+          {/* Show other active filter pills (NOT pinned filters) AFTER the 3 pinned positions */}
+          {getActiveFiltersInOrder().filter(f => f.type !== 'medical' && f.type !== 'diagnoses' && f.type !== 'medications').map(filter => {
             switch (filter.type) {
               case 'date':
                 return (
@@ -1075,7 +1396,7 @@ export function FilterBar() {
                   <MultiselectFilter
                     key="docType"
                     label="Doc Type"
-                    icon={<img src="/svg/profile.svg" alt="Doc Type" width="16" height="16" />}
+                    icon={<img src="/svg/Document.svg" alt="Doc Type" width="16" height="16" />}
                     values={allPossibleTypes.map(type => ({ id: type, label: type }))}
                     selectedValues={filter.data?.values || []}
                     onValueChange={handleDocTypeChange}
@@ -1085,57 +1406,55 @@ export function FilterBar() {
                   />
                 );
               
+              case 'medications':
+                return (
+                  <MultiselectFilter
+                    key="medications"
+                    label="Medication"
+                    icon={<img src="/svg/Medications.svg" alt="Medication" width="16" height="16" />}
+                    values={medicationValues}
+                    selectedValues={filter.data?.values || []}
+                    onValueChange={handleMedicationsChange}
+                    onClear={() => handleMedicationsChange([])}
+                    onOperatorChange={handleMedicationsOperatorChange}
+                    openValueMenuInitially={newlyCreatedPills.has('medications')}
+                  />
+                );
+              
+              case 'diagnoses':
+                return (
+                  <MultiselectFilter
+                    key="diagnoses"
+                    label="Diagnosis"
+                    icon={<img src="/svg/Diagnosis.svg" alt="Diagnosis" width="16" height="16" />}
+                    values={diagnosisValues}
+                    selectedValues={filter.data?.values || []}
+                    onValueChange={handleDiagnosesChange}
+                    onClear={() => handleDiagnosesChange([])}
+                    onOperatorChange={handleDiagnosesOperatorChange}
+                    openValueMenuInitially={newlyCreatedPills.has('diagnoses')}
+                  />
+                );
+              
+              case 'labs':
+                return (
+                  <MultiselectFilter
+                    key="labs"
+                    label="Labs"
+                    icon={<img src="/svg/Labs.svg" alt="Labs" width="16" height="16" />}
+                    values={labValues}
+                    selectedValues={filter.data?.values || []}
+                    onValueChange={handleLabsChange}
+                    onClear={() => handleLabsChange([])}
+                    onOperatorChange={handleLabsOperatorChange}
+                    openValueMenuInitially={newlyCreatedPills.has('labs')}
+                  />
+                );
+              
               default:
                 return null;
             }
           })}
-          
-          {/* Show quick filters only when no filters are active */}
-          {!hasActiveFilters && quickFilters.map(filter => (
-            <QuickFilterButton
-              key={filter.key}
-              ref={(el) => {
-                quickFilterRefs.current[filter.key] = el;
-              }}
-              onClick={() => {
-                // Create pill immediately and show values menu - same behavior as More filters
-                if (filter.key === 'author') {
-                  // Author filter - create pill without value, mark as newly created
-                  setNewlyCreatedPills(prev => {
-                    const newSet = new Set(prev);
-                    newSet.add('author');
-                    return newSet;
-                  });
-                  // Add to creation order and create empty filter
-                  const newFilters = addToCreationOrder('author', { ...filters, author: { values: [] } });
-                  setFilters(newFilters);
-                } else if (filter.key === 'facility') {
-                  // Facility filter - create pill without value, mark as newly created
-                  setNewlyCreatedPills(prev => {
-                    const newSet = new Set(prev);
-                    newSet.add('facility');
-                    return newSet;
-                  });
-                  // Add to creation order and create empty filter
-                  const newFilters = addToCreationOrder('facility', { ...filters, facility: { values: [] } });
-                  setFilters(newFilters);
-                } else if (filter.key === 'medical') {
-                  // Medical Entity filter - create pill without value, mark as newly created
-                  setNewlyCreatedPills(prev => {
-                    const newSet = new Set(prev);
-                    newSet.add('medical');
-                    return newSet;
-                  });
-                  // Add to creation order and create empty filter
-                  const newFilters = addToCreationOrder('medical', { ...filters, medical: { medications: [], diagnoses: [], labs: [] } });
-                  setFilters(newFilters);
-                }
-              }}
-            >
-              <img src={filter.icon} alt={filter.label} width="16" height="16" />
-              {filter.label}
-            </QuickFilterButton>
-          ))}
           
           {/* Original conditional logic - commented out for debugging */}
           {/* {!hasActiveFilters && quickFilters.map(filter => (
@@ -1223,6 +1542,36 @@ export function FilterBar() {
                               // Add to creation order and create empty filter
                               const newFilters = addToCreationOrder('docType', { ...filters, docType: { values: [] } });
                               setFilters(newFilters);
+                            } else if (filter.key === 'medications') {
+                              // Medications filter - create pill without value, mark as newly created
+                              setNewlyCreatedPills(prev => {
+                                const newSet = new Set(prev);
+                                newSet.add('medications');
+                                return newSet;
+                              });
+                              // Add to creation order and create empty filter
+                              const newFilters = addToCreationOrder('medications', { ...filters, medications: { values: [] } });
+                              setFilters(newFilters);
+                            } else if (filter.key === 'diagnoses') {
+                              // Diagnoses filter - create pill without value, mark as newly created
+                              setNewlyCreatedPills(prev => {
+                                const newSet = new Set(prev);
+                                newSet.add('diagnoses');
+                                return newSet;
+                              });
+                              // Add to creation order and create empty filter
+                              const newFilters = addToCreationOrder('diagnoses', { ...filters, diagnoses: { values: [] } });
+                              setFilters(newFilters);
+                            } else if (filter.key === 'labs') {
+                              // Labs filter - create pill without value, mark as newly created
+                              setNewlyCreatedPills(prev => {
+                                const newSet = new Set(prev);
+                                newSet.add('labs');
+                                return newSet;
+                              });
+                              // Add to creation order and create empty filter
+                              const newFilters = addToCreationOrder('labs', { ...filters, labs: { values: [] } });
+                              setFilters(newFilters);
                             }
                           }}>
                             <img src={filter.icon} alt={filter.label} width="16" height="16" />
@@ -1252,13 +1601,13 @@ export function FilterBar() {
             if (!filter) return null;
             
             // Determine if this is a multiselect filter
-            const isMultiselect = filter.key === 'facility' || filter.key === 'medical' || filter.key === 'author';
+            const isMultiselect = filter.key === 'medical' || filter.key === 'diagnoses' || filter.key === 'medications';
             
             const filteredValues = getFilteredMenuItems(filter);
             
             // Determine if search input should be shown (only for filters with many options)
-            const shouldShowSearch = (filter.key === 'facility' && allPossibleFacilities.length > 5) ||
-                                   (filter.key === 'author' && allPossibleAuthors.length > 5) ||
+            const shouldShowSearch = (filter.key === 'diagnoses' && allPossibleDiagnoses.length > 5) ||
+                                   (filter.key === 'medications' && allPossibleMedications.length > 5) ||
                                    (filter.key === 'docType' && allPossibleTypes.length > 5);
             // Medical Entity doesn't need search - only has 3 options (Medications, Diagnoses, Labs)
             
@@ -1289,20 +1638,24 @@ export function FilterBar() {
                 )}
                 
                 {/* Filter items - scrollable */}
-                <div style={{
-                  maxHeight: shouldShowSearch ? '50vh' : '60vh',
-                  overflowY: 'auto',
-                  /* Remove scrollbar borders */
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: '#e5e7eb transparent'
-                }}>
+                <div 
+                  ref={setQuickFilterScrollRef}
+                  style={{
+                    maxHeight: shouldShowSearch ? '50vh' : '60vh',
+                    overflowY: 'auto',
+                    overscrollBehavior: 'contain',
+                    scrollBehavior: 'auto',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#e5e7eb transparent'
+                  }}
+                >
                   {filteredValues.map(value => {
                     // Determine if this value is currently selected
                     let isSelected = false;
-                    if (filter.key === 'facility') {
-                      isSelected = (filters.facility?.values || []).includes(value.id);
-                    } else if (filter.key === 'author') {
-                      isSelected = (filters.author?.values || []).includes(value.id);
+                    if (filter.key === 'diagnoses') {
+                      isSelected = (filters.diagnoses?.values || []).includes(value.id);
+                    } else if (filter.key === 'medications') {
+                      isSelected = (filters.medications?.values || []).includes(value.id);
                     } else if (filter.key === 'medical') {
                       const medical = filters.medical || { medications: [], diagnoses: [], labs: [] };
                       if (value.id === 'medications') {
@@ -1317,13 +1670,25 @@ export function FilterBar() {
                     return (
                       <QuickFilterMenuItem
                         key={value.id}
+                        type="button"
                         isSelected={isSelected}
-                        onClick={() => {
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          
+                          // Save scroll position before state change
+                          const el = quickFilterScrollRef.current;
+                          quickFilterScrollPosition.current = el ? el.scrollTop : 0;
+                          isTogglingQuickFilter.current = true;
+                          
                           // Apply the filter value (handles multiselect internally)
                           filter.onValueChange?.(value.id);
                           
-                          // Always close menu after selection to create pill
-                          setActiveQuickFilter(null);
+                          // Only close menu for single-select filters
+                          // Keep open for multiselect so user can select multiple values
+                          if (!isMultiselect) {
+                            setActiveQuickFilter(null);
+                          }
                         }}
                       >
                         {isMultiselect && (

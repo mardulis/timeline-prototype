@@ -97,6 +97,16 @@ export function SearchAwareContent({
 }: SearchAwareContentProps) {
   const { query, results, clearFilters } = useSearch();
   
+  // Deselect and close preview if selected document is filtered out
+  React.useEffect(() => {
+    if (selectedDocId) {
+      const isStillInResults = results.some(doc => doc.id === selectedDocId);
+      if (!isStillInResults) {
+        onClosePreview();
+      }
+    }
+  }, [results, selectedDocId, onClosePreview]);
+  
   // Show loading state if no docs are loaded yet
   if (docs.length === 0) {
     return (

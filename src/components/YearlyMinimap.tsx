@@ -136,7 +136,7 @@ const YearlyMinimap: React.FC<YearlyMinimapProps> = ({
             height={data.count > 0 ? (data.count / maxCount) * 50 : 4}
             isActive={false}
             onClick={() => handleBarClick(data.month)}
-            title={`${data.monthName}: ${data.count} documents`}
+            title={`${data.monthName}: ${data.count === 0 ? 'No documents' : `${data.count} ${data.count === 1 ? 'document' : 'documents'}`}`}
           />
         ))}
         

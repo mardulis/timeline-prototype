@@ -71,11 +71,14 @@ const MonthDropdown = styled.div`
   border: none;
   border-radius: 8px;
   padding: 8px 12px;
+  padding-right: 20px; /* 12px base + 8px extra on right */
   font-size: 16px;
   font-weight: 600;
   color: #1f2937;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-width: 168px; /* Fixed width to accommodate "December 9999" + 8px extra padding */
+  text-align: left;
   
   &:hover {
     background-color: #f3f4f6;

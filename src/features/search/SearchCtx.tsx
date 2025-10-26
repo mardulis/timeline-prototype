@@ -26,6 +26,19 @@ export interface SearchFilters {
     values?: string[];
     operator?: string;
   };
+  // Individual medication/diagnosis/lab filters (separate from Medical Entity)
+  medications?: {
+    values?: string[];
+    operator?: string;
+  };
+  diagnoses?: {
+    values?: string[];
+    operator?: string;
+  };
+  labs?: {
+    values?: string[];
+    operator?: string;
+  };
   flagged?: boolean;
   // Global creation order tracking
   creationOrder?: string[]; // Array of filter keys in creation order
@@ -35,8 +48,9 @@ export interface SearchContextType {
   query: string;
   setQuery: (query: string) => void;
   filters: SearchFilters;
-  setFilters: (filters: SearchFilters) => void;
+  setFilters: React.Dispatch<React.SetStateAction<SearchFilters>>;
   results: Doc[];
+  allDocs: Doc[]; // Original unfiltered documents
   clearFilters: () => void;
 }
 
@@ -73,6 +87,7 @@ export function SearchProvider({ docs, children }: {
       filters,
       setFilters,
       results,
+      allDocs: docs, // Expose original unfiltered documents
       clearFilters
     }}>
       {children}
@@ -216,6 +231,78 @@ function applyFilters(docs: Doc[], query: string, filters: SearchFilters): Doc[]
       }
       
       return true;
+    });
+  }
+  
+  // Apply individual medications filter (separate from Medical Entity)
+  if (filters.medications?.values && filters.medications.values.length > 0) {
+    const operator = filters.medications.operator || 'is-any-of';
+    filtered = filtered.filter(doc => {
+      if (!doc.medications || doc.medications.length === 0) return false;
+      
+      if (operator === 'is') {
+        // For 'is', check if doc has exactly the selected medication(s)
+        return filters.medications!.values!.some(filterMed =>
+          doc.medications!.some(med => 
+            med.toLowerCase().includes(filterMed.toLowerCase())
+          )
+        );
+      } else {
+        // For 'is-any-of', check if doc has any of the selected medications
+        return filters.medications!.values!.some(filterMed =>
+          doc.medications!.some(med => 
+            med.toLowerCase().includes(filterMed.toLowerCase())
+          )
+        );
+      }
+    });
+  }
+  
+  // Apply individual diagnoses filter (separate from Medical Entity)
+  if (filters.diagnoses?.values && filters.diagnoses.values.length > 0) {
+    const operator = filters.diagnoses.operator || 'is-any-of';
+    filtered = filtered.filter(doc => {
+      if (!doc.diagnoses || doc.diagnoses.length === 0) return false;
+      
+      if (operator === 'is') {
+        // For 'is', check if doc has exactly the selected diagnosis(es)
+        return filters.diagnoses!.values!.some(filterDiag =>
+          doc.diagnoses!.some(diag => 
+            diag.toLowerCase().includes(filterDiag.toLowerCase())
+          )
+        );
+      } else {
+        // For 'is-any-of', check if doc has any of the selected diagnoses
+        return filters.diagnoses!.values!.some(filterDiag =>
+          doc.diagnoses!.some(diag => 
+            diag.toLowerCase().includes(filterDiag.toLowerCase())
+          )
+        );
+      }
+    });
+  }
+  
+  // Apply individual labs filter (separate from Medical Entity)
+  if (filters.labs?.values && filters.labs.values.length > 0) {
+    const operator = filters.labs.operator || 'is-any-of';
+    filtered = filtered.filter(doc => {
+      if (!doc.labs || doc.labs.length === 0) return false;
+      
+      if (operator === 'is') {
+        // For 'is', check if doc has exactly the selected lab(s)
+        return filters.labs!.values!.some(filterLab =>
+          doc.labs!.some(lab => 
+            lab.toLowerCase().includes(filterLab.toLowerCase())
+          )
+        );
+      } else {
+        // For 'is-any-of', check if doc has any of the selected labs
+        return filters.labs!.values!.some(filterLab =>
+          doc.labs!.some(lab => 
+            lab.toLowerCase().includes(filterLab.toLowerCase())
+          )
+        );
+      }
     });
   }
   

@@ -1,11 +1,11 @@
 :root{
-  --bg: #ffffff;
-  --text: #0F172A;
+  --bg: #f9fafb; /* Light gray background for active filters */
+  --text: #2582ff; /* Blue text for active filters */
   --muted: #98A2B3;
-  --stroke: #E6EAF2;
-  --hover: #F2F4F7;
-  --active: #E7EAEE;
-  --accent: #2563EB; /* checkbox blue */
+  --stroke: #e5e7eb; /* Border color matching Figma */
+  --hover: #f3f4f6;
+  --active: #e5e7eb;
+  --accent: #2582ff; /* Brand blue */
 }
 
 /* === Pill container === */
@@ -15,16 +15,17 @@
   align-items: center;
   height: 32px;
   border-radius: 10px;
-  border: 1px solid var(--stroke);
-  background: var(--bg);
+  border: 1px solid #e5e7eb; /* Figma border color */
+  background: #f9fafb; /* Figma light gray background for active filters */
   padding-inline: 0; /* Remove outer padding to let sections control their own spacing */
   overflow: hidden;
   width: fit-content; /* Hug width - size to content */
+  box-shadow: 0px 1px 4px 0px rgba(12, 12, 13, 0.05); /* Figma shadow */
 }
 
-/* vertical dividers - right border on all sections */
+/* vertical dividers - right border on all sections except last */
 .pill > * {
-  border-right: 1px solid var(--stroke);
+  border-right: 0.5px solid #e5e7eb; /* Thin border matching Figma */
 }
 .pill > *:last-child {
   border-right: none; /* Remove border from last section */
@@ -46,13 +47,49 @@
   gap: 8px;
 }
 .icon {
-  width: 18px;
-  height: 18px;
-  opacity: 0.8;
+  width: 16px;
+  height: 16px;
+  color: #2582ff; /* Primary blue color for icon when filter has value */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg,
+.icon svg * {
+  width: 16px;
+  height: 16px;
+  fill: #2582ff !important; /* Force blue color for all SVG paths when filter has value */
+  stroke: #2582ff !important; /* Also set stroke in case SVG uses stroke */
+  color: #2582ff; /* Set color as well */
+}
+
+/* Handle img tags - convert to blue using CSS filter when filter has value */
+.icon img {
+  filter: brightness(0) saturate(100%) invert(42%) sepia(95%) saturate(2726%) hue-rotate(207deg) brightness(102%) contrast(101%);
+}
+
+.iconEmpty {
+  color: #0f172a; /* Dark slate color when filter has no value - matches Figma */
+}
+
+.iconEmpty svg,
+.iconEmpty svg * {
+  fill: #0f172a !important; /* Force dark slate color for all SVG paths when filter has no value */
+  stroke: #0f172a !important; /* Also set stroke in case SVG uses stroke */
+  color: #0f172a; /* Set color as well */
+}
+
+/* Handle img tags - convert to dark slate using CSS filter when filter has no value (#0f172a) */
+.iconEmpty img {
+  filter: brightness(0) saturate(100%) invert(7%) sepia(14%) saturate(3297%) hue-rotate(183deg) brightness(95%) contrast(93%);
 }
 .labelText {
-  font: 500 13px/1.1 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  color: var(--text);
+  font-family: 'Switzer', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #2582ff; /* Figma blue text */
   white-space: nowrap;
   flex-shrink: 0; /* Prevent text from shrinking */
 }
@@ -72,27 +109,59 @@
   composes: seg;
   composes: buttonReset;
   border-radius: 0; /* flat */
-  border-right: 1px solid var(--stroke); /* Ensure right border is applied */
+  border-right: 0.5px solid #e5e7eb; /* Ensure right border is applied */
 }
-.segmentBtn:hover { background: var(--hover); }
-.segmentBtn[data-open="true"] { background: var(--active); }
+.segmentBtn:hover { background: #f3f4f6; }
+.segmentBtn[data-open="true"] { background: #e5e7eb; }
 
 .operatorText {
-  font-weight: 500;
+  font-family: 'Switzer', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   font-size: 13px;
-  color: var(--text);
+  font-weight: 500;
+  line-height: 20px;
+  color: #2582ff; /* Figma blue text */
   white-space: nowrap;
   flex-shrink: 0; /* Prevent text from shrinking */
 }
 
 .valueText {
-  font-weight: 500;
+  font-family: 'Switzer', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   font-size: 13px;
-  color: var(--text);
+  font-weight: 500;
+  line-height: 20px;
+  color: #2582ff; /* Figma blue text */
   white-space: nowrap;
-  flex-shrink: 0; /* Prevent text from shrinking */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; /* Limit width before ellipsis */
+  flex-shrink: 1; /* Allow text to shrink and show ellipsis */
+  position: relative;
 }
-.valueText.isEmpty { color: var(--text); }
+.valueText.isEmpty { 
+  color: #6b7280; /* Figma gray color for placeholder text */
+  font-weight: 400; /* Regular weight for placeholder */
+}
+
+/* Tooltip for truncated values */
+.valueTooltip {
+  position: fixed;
+  z-index: 99999;
+  background: #0f172a; /* Figma dark background */
+  color: #f1f5f9; /* Figma light text */
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-family: 'Switzer', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+  word-wrap: break-word;
+  max-width: 300px;
+  box-shadow: 0px 1px 4px 0px rgba(3, 7, 18, 0.1), 0px 1px 4px 0px rgba(12, 12, 13, 0.05);
+  pointer-events: none;
+  transform: translateY(-100%);
+  margin-top: -8px;
+}
 
 /* clear icon button */
 .clearBtn {
@@ -104,9 +173,10 @@
   padding: 0 10px; /* 10px left and right padding around icon */
   width: fit-content; /* Hug width to accommodate padding */
   border: none; /* No border for standard button appearance */
+  color: #2582ff; /* Figma blue color for X icon */
 }
-.clearBtn:hover { background: var(--hover); }
-.clearBtn:active { background: var(--active); }
+.clearBtn:hover { background: #f3f4f6; }
+.clearBtn:active { background: #e5e7eb; }
 
 /* focus ring on the segment only */
 .segmentBtn:focus-visible, .clearBtn:focus-visible {
@@ -234,6 +304,10 @@
   /* Remove scrollbar borders */
   scrollbar-width: thin;
   scrollbar-color: #e5e7eb transparent;
+  /* Prevent parent scroll/focus tug */
+  overscroll-behavior: contain;
+  /* No smooth scroll surprises */
+  scroll-behavior: auto;
 }
 
 .valuesContainer::-webkit-scrollbar {

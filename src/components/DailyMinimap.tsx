@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { Doc } from '../types/Timeline';
 
 const MinimapContainer = styled.div<{ rightPadding: number }>`
   background: #FFFFFF;
-  padding: 16px ${props => props.rightPadding}px 16px 24px; /* Dynamic right padding, 24px left padding */
+  padding: 16px ${props => props.rightPadding}px 6px 24px; /* 16px top, dynamic right, 6px bottom, 24px left */
   width: 100%;
   overflow: visible; /* Allow content to extend beyond container bounds */
   min-width: 0; /* Allow container to shrink */
@@ -12,7 +13,7 @@ const MinimapContainer = styled.div<{ rightPadding: number }>`
 
 const MinimapWrapper = styled.div`
   position: relative;
-  height: 60px;
+  height: 32px;
   padding: 8px 0 16px 0;
   overflow: visible;
   width: 100%;
@@ -73,7 +74,7 @@ const MinimapBar = styled.div<{ height: number; isActive: boolean; width: number
 `;
 
 const CustomTooltip = styled.div<{ visible: boolean; x: number; y: number }>`
-  position: absolute;
+  position: fixed;
   left: ${props => props.x}px;
   top: ${props => props.y}px;
   background: #1f2937; /* Dark background */
@@ -83,7 +84,7 @@ const CustomTooltip = styled.div<{ visible: boolean; x: number; y: number }>`
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
-  z-index: 100; /* Higher than timeframe section (z-index: 50) */
+  z-index: 50010; /* Higher than TopSection (50004) and all other elements */
   opacity: ${props => props.visible ? 1 : 0};
   visibility: ${props => props.visible ? 'visible' : 'hidden'};
   transition: opacity 0.15s ease;
@@ -251,7 +252,7 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
       
       return {
         ...data,
-        height: data.count > 0 ? Math.max((data.count / maxCount) * 50, 4) : 4,
+        height: data.count > 0 ? Math.max((data.count / maxCount) * 24, 4) : 4, // Max 24px height
         width: barWidth, // 4px width
         position: position // Position for blue dot
       };
@@ -293,9 +294,9 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
     const containerRect = event.currentTarget.closest('[data-minimap-container]')?.getBoundingClientRect();
     
     if (containerRect) {
-      // Calculate the center position of the bar relative to the container
-      const barCenterX = data.position;
-      const tooltipY = 30 + 4; // 30px higher + 4px offset below (within bounds)
+      // Calculate screen position for fixed tooltip
+      const barCenterX = containerRect.left + 24 + data.position; // 24px = left padding
+      const tooltipY = containerRect.top + 16 - 6; // 16px = top padding, -6 to move up
       const dateStr = new Date(data.year, data.month, data.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       
       // Small delay to prevent flickering
@@ -303,8 +304,8 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
         setTooltip({
           visible: true,
           x: barCenterX,
-          y: tooltipY, // Fixed position below minimap bottom border
-          content: `${dateStr}\n${data.count} documents`
+          y: tooltipY, // Fixed position above minimap bars
+          content: `${dateStr}\n${data.count === 0 ? 'No documents' : `${data.count} ${data.count === 1 ? 'document' : 'documents'}`}`
         });
       }, 100);
       
@@ -350,8 +351,8 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
     if (containerRect) {
       setDolTooltip({
         visible: true,
-        x: dolPosition, // Use DOL position directly, same as bar tooltips use data.position
-        y: 30 + 4 // Same fixed position as bar tooltips
+        x: containerRect.left + 24 + dolPosition, // Convert to screen coordinates
+        y: containerRect.top + 16 - 6 // Same fixed position as bar tooltips (moved up 40px)
       });
     }
   };
@@ -367,6 +368,7 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
   };
 
   return (
+    <>
     <MinimapContainer data-minimap-container rightPadding={rightPadding}>
       <MinimapWrapper>
         <Baseline />
@@ -390,27 +392,6 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
             onMouseLeave={data.hasData ? handleBarMouseLeave : undefined}
           />
         ))}
-        
-        {/* Custom tooltip */}
-        <CustomTooltip
-          visible={tooltip.visible}
-          x={tooltip.x}
-          y={tooltip.y}
-        >
-          {tooltip.content.split('\n').map((line, index) => (
-            <div key={index}>{line}</div>
-          ))}
-        </CustomTooltip>
-        
-        {/* DOL tooltip */}
-        <CustomTooltip
-          visible={dolTooltip.visible}
-          x={dolTooltip.x}
-          y={dolTooltip.y}
-        >
-          <div>Date of Loss</div>
-          <div>March 27, 2020</div>
-        </CustomTooltip>
         
         {/* Blue dot for selected document */}
         {blueDotPosition >= 0 && (
@@ -449,7 +430,7 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
               onClick={() => handleDayClick(data.day)}
               onMouseEnter={(e) => {
                 const target = e.currentTarget as HTMLElement;
-                target.style.backgroundColor = '#f3f4f6'; // All days get hover background
+                target.style.backgroundColor = 'rgba(230, 241, 255, 0.5)'; // Match minimap hover - light blue with transparency
                 target.style.color = data.hasData ? '#111827' : '#374151'; // Slightly darker for empty days too
               }}
               onMouseLeave={(e) => {
@@ -464,6 +445,32 @@ const DailyMinimap: React.FC<DailyMinimapProps> = ({
         })}
       </DayLabels>
     </MinimapContainer>
+    {/* Bar tooltip - rendered via portal to escape all parent stacking contexts */}
+    {tooltip.visible && createPortal(
+      <CustomTooltip
+        visible={tooltip.visible}
+        x={tooltip.x}
+        y={tooltip.y}
+      >
+        {tooltip.content.split('\n').map((line, index) => (
+          <div key={index}>{line}</div>
+        ))}
+      </CustomTooltip>,
+      document.body
+    )}
+    {/* DOL tooltip - rendered via portal */}
+    {dolTooltip.visible && createPortal(
+      <CustomTooltip
+        visible={dolTooltip.visible}
+        x={dolTooltip.x}
+        y={dolTooltip.y}
+      >
+        <div>Date of Loss</div>
+        <div>March 27, 2020</div>
+      </CustomTooltip>,
+      document.body
+    )}
+    </>
   );
 };
 

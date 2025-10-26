@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { Doc } from '../types/Timeline';
 
@@ -133,7 +134,7 @@ function computeYearLabels({
 
 const MinimapContainer = styled.div`
   background: #FFFFFF;
-  padding: 16px 24px; /* 24px padding on left and right */
+  padding: 16px 24px 6px 24px; /* 16px top, 24px left/right, 6px bottom */
   width: 100%;
   overflow: visible; /* Allow content to extend beyond container bounds */
   min-width: 0; /* Allow container to shrink */
@@ -142,7 +143,7 @@ const MinimapContainer = styled.div`
 
 const MinimapWrapper = styled.div`
   position: relative;
-  height: 60px;
+  height: 32px;
   padding: 8px 0 16px 0; /* Increased bottom padding to accommodate blue dot */
   overflow: visible; /* Changed from hidden to visible to show blue dot */
   width: 100%;
@@ -172,38 +173,24 @@ const Baseline = styled.div`
   z-index: 1;
 `;
 
-const MinimapBar = styled.div<{ height: number; isActive: boolean; width: number; position: number; isHighlighted?: boolean; hasData?: boolean }>`
+const MinimapBar = styled.div<{ height: number; isActive: boolean; width: number; position: number; isHighlighted?: boolean; hasData?: boolean; isYearHovered?: boolean }>`
   position: absolute;
   bottom: 0;
   left: ${props => props.position - props.width / 2}px;
   width: ${props => props.width}px;
   height: ${props => Math.max(props.height, 4)}px;
-  background: ${props => props.hasData ? '#94A3B8' : 'transparent'}; /* Transparent for empty months */
-  border-radius: 2px 2px 0 0; /* Rounded top corners */
-  cursor: ${props => props.hasData ? 'pointer' : 'default'}; /* Only clickable if has data */
+  background: ${props => {
+    if (!props.hasData) return 'transparent';
+    return props.isYearHovered ? '#66aeff' : '#94a3b8'; /* Blue when year is hovered, gray otherwise */
+  }};
+  border-radius: 8px 8px 0 0; /* Rounded top corners - 8px from Figma */
+  pointer-events: none; /* Bars are no longer clickable */
   transition: all 0.2s ease;
   z-index: 2;
-  
-  /* Increase hover area by 2px on each side */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -2px;
-    right: -2px;
-    bottom: 0;
-    background: transparent;
-    z-index: -1;
-  }
-  
-  &:hover {
-    background: ${props => props.hasData ? '#99C9FF' : 'transparent'}; /* Updated hover color */
-    opacity: ${props => props.hasData ? 0.8 : 1}; /* Only opacity change if has data */
-  }
 `;
 
 const CustomTooltip = styled.div<{ visible: boolean; x: number; y: number }>`
-  position: absolute; /* Use absolute positioning relative to minimap container */
+  position: fixed;
   left: ${props => props.x}px;
   top: ${props => props.y}px;
   background: #1f2937; /* Dark background */
@@ -213,7 +200,7 @@ const CustomTooltip = styled.div<{ visible: boolean; x: number; y: number }>`
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
-  z-index: 1000;
+  z-index: 50010; /* Higher than TopSection (50004) and all other elements */
   opacity: ${props => props.visible ? 1 : 0};
   visibility: ${props => props.visible ? 'visible' : 'hidden'};
   transition: opacity 0.15s ease;
@@ -270,13 +257,66 @@ const YearLabel = styled.div<{ position: number; hasData?: boolean }>`
   user-select: none; /* Prevent text selection */
   
   &:hover {
-    background: #f3f4f6;
+    background: rgba(230, 241, 255, 0.5); /* Match minimap hover - light blue with transparency */
     color: #111827;
   }
   
   &:active {
     background: #e5e7eb;
     color: #111827;
+  }
+`;
+
+const YearHoverArea = styled.div<{ left: number; width: number }>`
+  position: absolute;
+  bottom: 0;
+  left: ${props => props.left}px;
+  width: ${props => props.width}px;
+  height: 28px; /* 24px bars + 4px padding on top */
+  background: transparent;
+  cursor: pointer;
+  z-index: 3;
+  transition: background 0.2s ease;
+  border-radius: 4px 4px 0 0; /* Top corners rounded - from Figma */
+  
+  &:hover {
+    background: rgba(230, 241, 255, 0.5); /* Brand tertiary color with 50% opacity for lighter effect */
+    padding: 4px 0 0 4px; /* Padding from Figma - only on hover to create the offset effect */
+  }
+`;
+
+const YearTooltip = styled.div<{ visible: boolean; x: number; y: number }>`
+  position: fixed; /* Use fixed positioning to escape all parent constraints */
+  left: ${props => props.x}px;
+  top: ${props => props.y}px;
+  transform: translateX(-50%) translateY(-100%); /* Position directly above */
+  background: #0f172a; /* Dark neutral background from Figma */
+  color: #f1f5f9; /* Light text from Figma */
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.4;
+  white-space: nowrap;
+  z-index: 99999; /* Very high z-index to appear above everything */
+  opacity: ${props => props.visible ? 1 : 0};
+  visibility: ${props => props.visible ? 'visible' : 'hidden'};
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  box-shadow: 0 1px 4px 0 rgba(3, 7, 18, 0.1), 0 1px 4px 0 rgba(12, 12, 13, 0.05);
+  margin-top: -10px; /* 10px gap above the minimap */
+  
+  /* Beak (arrow pointing down) */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: #0f172a;
   }
 `;
 
@@ -296,6 +336,8 @@ interface MultiYearMinimapProps {
   onBarClick: (date: Date) => void;
   isPreviewVisible?: boolean;
   onYearClick?: (year: number) => void;
+  onScaleChange?: (scale: 'year' | 'month' | 'day') => void;
+  onYearChange?: (year: number) => void;
 }
 
 const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
@@ -303,7 +345,9 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
   selectedDocId,
   onBarClick,
   isPreviewVisible = false,
-  onYearClick
+  onYearClick,
+  onScaleChange,
+  onYearChange
 }) => {
   const [tooltip, setTooltip] = useState<{
     visible: boolean;
@@ -319,6 +363,33 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
   
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+  const [hoveredYear, setHoveredYear] = useState<number | null>(null);
+  const [yearTooltip, setYearTooltip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    year: number;
+    count: number;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    year: 0,
+    count: 0
+  });
+  
+  const [labelTooltip, setLabelTooltip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    text: string;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    text: ''
+  });
+  
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Track viewport width changes
@@ -402,7 +473,7 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
       
       return {
         ...data,
-        height: data.count > 0 ? Math.max((data.count / maxCount) * 50, 4) : 4,
+        height: data.count > 0 ? Math.max((data.count / maxCount) * 24, 4) : 4, // Max 24px height
         width: barWidth, // 4px width
         position: position // Position for blue dot
       };
@@ -507,9 +578,9 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
     const containerRect = event.currentTarget.closest('[data-minimap-container]')?.getBoundingClientRect();
     
     if (containerRect) {
-      // Calculate the center position of the bar relative to the container
-      const barCenterX = data.position;
-      const tooltipY = 30 + 4; // 30px higher + 4px offset below (within bounds)
+      // Calculate screen position for fixed tooltip
+      const barCenterX = containerRect.left + 24 + data.position; // 24px = left padding
+      const tooltipY = containerRect.top + 16 - 6; // 16px = top padding, -6 to move up
       
       // Small delay to prevent flickering
       const timeout = setTimeout(() => {
@@ -517,7 +588,7 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
           visible: true,
           x: barCenterX,
           y: tooltipY, // Fixed position below minimap bottom border
-          content: `${data.monthName} ${data.year}\n${data.count} documents`
+          content: `${data.monthName} ${data.year}\n${data.count === 0 ? 'No documents' : `${data.count} ${data.count === 1 ? 'document' : 'documents'}`}`
         });
       }, 100);
       
@@ -533,6 +604,35 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
     }
     setTooltip(prev => ({ ...prev, visible: false }));
   };
+
+  // Calculate year hover areas
+  const yearHoverAreas = useMemo(() => {
+    const minYear = 2018;
+    const maxYear = 2025;
+    const areas = [];
+    
+    for (let year = minYear; year <= maxYear; year++) {
+      const yearBars = monthlyDataWithHeights.filter(data => data.year === year);
+      
+      if (yearBars.length > 0) {
+        const firstBar = yearBars[0];
+        const lastBar = yearBars[yearBars.length - 1];
+        
+        // Calculate left position (start of first bar)
+        const left = firstBar.position - (firstBar.width / 2);
+        // Calculate width (from start of first bar to end of last bar)
+        const width = (lastBar.position + (lastBar.width / 2)) - left;
+        
+        areas.push({
+          year,
+          left,
+          width
+        });
+      }
+    }
+    
+    return areas;
+  }, [monthlyDataWithHeights]);
 
   // Calculate DOL (Date of Loss) position for March 27, 2020
   const dolPosition = useMemo(() => {
@@ -559,8 +659,8 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
     if (containerRect) {
       setDolTooltip({
         visible: true,
-        x: dolPosition, // Use DOL position directly, same as bar tooltips use data.position
-        y: 30 + 4 // Same fixed position as bar tooltips
+        x: containerRect.left + 24 + dolPosition, // Convert to screen coordinates
+        y: containerRect.top + 16 - 6 // Same fixed position as other minimaps (moved up 40px)
       });
     }
   };
@@ -576,6 +676,7 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
   };
 
   return (
+    <>
     <MinimapContainer ref={containerRef} data-minimap-container>
       <MinimapWrapper>
         <Baseline />
@@ -587,17 +688,50 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
             position={data.position}
             isActive={false}
             hasData={data.hasData}
+            isYearHovered={hoveredYear === data.year}
             isHighlighted={!!(selectedDocId && docs.find(doc => {
               const docDate = new Date(doc.date);
               return doc.id === selectedDocId && 
                      docDate.getFullYear() === data.year && 
                      docDate.getMonth() === data.month;
             }))}
-            onClick={data.hasData ? () => handleBarClick(data.year, data.month) : undefined}
-            onMouseEnter={data.hasData ? (e) => handleBarMouseEnter(e, data) : undefined}
-            onMouseLeave={data.hasData ? handleBarMouseLeave : undefined}
           />
         ))}
+        
+        {/* Year hover areas */}
+        {yearHoverAreas.map(({ year, left, width }) => {
+          const yearDocs = docs.filter(doc => new Date(doc.date).getFullYear() === year);
+          const centerX = left + (width / 2);
+          
+          return (
+            <YearHoverArea
+              key={year}
+              left={left}
+              width={width}
+              onClick={() => handleYearClick(year)}
+              onMouseEnter={(e) => {
+                setHoveredYear(year);
+                // Calculate screen position for fixed tooltip - centered on the hover area
+                const containerRect = containerRef.current?.getBoundingClientRect();
+                if (containerRect) {
+                  const screenX = containerRect.left + 24 + centerX; // Center horizontally on the year section (24px = left padding)
+                  const screenY = containerRect.top + 16 + 8 + 14 - 20; // 16px container top padding + 8px wrapper top padding + 14px (half of 28px hover area) - 20px offset
+                  setYearTooltip({
+                    visible: true,
+                    x: screenX,
+                    y: screenY,
+                    year: year,
+                    count: yearDocs.length
+                  });
+                }
+              }}
+              onMouseLeave={() => {
+                setHoveredYear(null);
+                setYearTooltip(prev => ({ ...prev, visible: false }));
+              }}
+            />
+          );
+        })}
         
         {/* Custom tooltip */}
         <CustomTooltip
@@ -610,15 +744,18 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
           ))}
         </CustomTooltip>
         
-        {/* DOL tooltip */}
-        <CustomTooltip
-          visible={dolTooltip.visible}
-          x={dolTooltip.x}
-          y={dolTooltip.y}
-        >
-          <div>Date of Loss</div>
-          <div>March 27, 2020</div>
-        </CustomTooltip>
+        {/* DOL tooltip - rendered via portal */}
+        {dolTooltip.visible && createPortal(
+          <CustomTooltip
+            visible={dolTooltip.visible}
+            x={dolTooltip.x}
+            y={dolTooltip.y}
+          >
+            <div>Date of Loss</div>
+            <div>March 27, 2020</div>
+          </CustomTooltip>,
+          document.body
+        )}
         
         {/* Blue dot for selected document */}
         {blueDotPosition >= 0 && (
@@ -648,10 +785,39 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
                   key={year} 
                   position={position}
                   hasData={hasData}
-                  onClick={() => handleYearClick(year)}
+                  onClick={() => {
+                    // Switch to Month view and set the year context
+                    try {
+                      if (onScaleChange && onYearChange) {
+                        onYearChange(year);
+                        onScaleChange('month');
+                      }
+                    } catch (error) {
+                      console.error('Error switching to month view:', error);
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    try {
+                      const target = e.currentTarget as HTMLElement;
+                      const rect = target.getBoundingClientRect();
+                      if (rect) {
+                        setLabelTooltip({
+                          visible: true,
+                          x: rect.left + rect.width / 2,
+                          y: rect.top, // Position above the label
+                          text: `View ${year} documents`
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Error showing label tooltip:', error);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    setLabelTooltip(prev => ({ ...prev, visible: false }));
+                  }}
                   role="button"
                   tabIndex={0}
-                  aria-label={`Navigate to year ${year}`}
+                  aria-label={`View ${year} documents`}
                 >
                   {year}
                 </YearLabel>
@@ -659,6 +825,29 @@ const MultiYearMinimap: React.FC<MultiYearMinimapProps> = ({
             })}
           </YearLabels>
     </MinimapContainer>
+    {/* Year section tooltip - rendered via portal to escape all parent stacking contexts */}
+    {yearTooltip.visible && createPortal(
+      <YearTooltip
+        visible={yearTooltip.visible}
+        x={yearTooltip.x}
+        y={yearTooltip.y}
+      >
+        {yearTooltip.count === 0 ? 'No documents' : `${yearTooltip.count} document${yearTooltip.count !== 1 ? 's' : ''}`}
+      </YearTooltip>,
+      document.body
+    )}
+    {/* Label tooltip - rendered via portal */}
+    {labelTooltip.visible && createPortal(
+      <YearTooltip
+        visible={labelTooltip.visible}
+        x={labelTooltip.x}
+        y={labelTooltip.y}
+      >
+        {labelTooltip.text}
+      </YearTooltip>,
+      document.body
+    )}
+    </>
   );
 };
 

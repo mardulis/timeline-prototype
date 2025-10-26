@@ -32,10 +32,10 @@ export function useMultiselectFilter(config: MultiselectFilterConfig) {
     return Array.isArray(selectedValues) ? selectedValues : [];
   }, [selectedValues]);
 
-  // Generate unique key for re-rendering
+  // Generate stable key (don't include selected values to avoid remounting)
   const filterKey = useMemo(() => {
-    return `${label.toLowerCase().replace(/\s+/g, '-')}-${JSON.stringify(normalizedSelectedValues)}`;
-  }, [label, normalizedSelectedValues]);
+    return `${label.toLowerCase().replace(/\s+/g, '-')}`;
+  }, [label]);
 
   // Value calculation that matches Medical Entity pattern
   const filterValue = useMemo(() => {

@@ -71,6 +71,34 @@ export default function FilterRulePill(props: FilterRulePillProps) {
   const [valPosition, setValPosition] = React.useState({ top: 0, left: 0 });
   const [valVisible, setValVisible] = React.useState(false);
   const [valSearchQuery, setValSearchQuery] = React.useState<string>('');
+  
+  // Stable portal host for dropdown (prevents remounting)
+  const portalHostRef = React.useRef<HTMLElement | null>(null);
+  React.useEffect(() => {
+    const host = document.createElement('div');
+    host.setAttribute('data-filter-portal', valDropdownId);
+    document.body.appendChild(host);
+    portalHostRef.current = host;
+    return () => {
+      if (portalHostRef.current) {
+        document.body.removeChild(portalHostRef.current);
+        portalHostRef.current = null;
+      }
+    };
+  }, [valDropdownId]);
+  
+  // Ref to preserve scroll position across re-renders
+  const valuesContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const scrollPositionRef = React.useRef<number>(0);
+  const isTogglingRef = React.useRef<boolean>(false);
+  
+  // Ref callback that restores scroll immediately on remount during toggle
+  const setValuesContainerRef = React.useCallback((node: HTMLDivElement | null) => {
+    valuesContainerRef.current = node;
+    if (node && isTogglingRef.current) {
+      node.scrollTop = scrollPositionRef.current;
+    }
+  }, []);
 
   // Check if dropdowns are open
   const valOpen = openDropdown === valDropdownId;
@@ -85,12 +113,48 @@ export default function FilterRulePill(props: FilterRulePillProps) {
     );
   }, [values, valSearchQuery]);
 
-  // Clear search when dropdown closes
+  // Clear search and reset scroll when dropdown closes or opens
   React.useEffect(() => {
     if (!valOpen) {
       setValSearchQuery('');
+      scrollPositionRef.current = 0;
+      isTogglingRef.current = false;
     }
   }, [valOpen]);
+  
+  // Reset scroll to top when opening (runs synchronously before paint)
+  React.useLayoutEffect(() => {
+    if (valOpen) {
+      isTogglingRef.current = false;
+      scrollPositionRef.current = 0;
+      
+      const el = valuesContainerRef.current;
+      if (el) {
+        // Immediate reset
+        el.scrollTop = 0;
+        
+        // Also reset after next frame
+        requestAnimationFrame(() => {
+          if (el) el.scrollTop = 0;
+        });
+        
+        // And after a small delay to catch any async updates
+        setTimeout(() => {
+          if (el) el.scrollTop = 0;
+        }, 10);
+      }
+    }
+  }, [valOpen]);
+  
+  // Restore scroll position after toggle (runs after commit, before paint)
+  React.useLayoutEffect(() => {
+    if (!isTogglingRef.current) return;
+    const el = valuesContainerRef.current;
+    if (el) {
+      el.scrollTop = scrollPositionRef.current;
+    }
+    isTogglingRef.current = false;
+  }, [currentValue]);
 
   // Auto-open value menu if requested
   React.useEffect(() => {
@@ -131,6 +195,11 @@ export default function FilterRulePill(props: FilterRulePillProps) {
   );
 
   const toggle = React.useCallback((id: string) => {
+    // Save scroll position before state change
+    const el = valuesContainerRef.current;
+    scrollPositionRef.current = el ? el.scrollTop : 0;
+    isTogglingRef.current = true;
+    
     if (multiple) {
       const arr = Array.isArray(currentValue) ? [...(currentValue as string[])] : [];
       const i = arr.indexOf(id);
@@ -227,7 +296,7 @@ export default function FilterRulePill(props: FilterRulePillProps) {
     <div className={`${cls.pill} ${className || ''}`} style={style}>
       {/* Label segment */}
       <div className={cls.seg}>
-        {icon && <span className={cls.icon}>{icon}</span>}
+        {icon && <span className={`${cls.icon} ${!valueLabel ? cls.iconEmpty : ''}`}>{icon}</span>}
         <span className={cls.labelText}>{label}</span>
       </div>
 
@@ -244,7 +313,14 @@ export default function FilterRulePill(props: FilterRulePillProps) {
         ref={valBtnRef}
         className={`${cls.segmentBtn} ${valOpen ? cls.open : ''}`}
         data-open={valOpen}
-        onClick={() => setOpenDropdown(valOpen ? null : valDropdownId)}
+        onClick={() => {
+          if (!valOpen) {
+            // Reset scroll position when opening
+            isTogglingRef.current = false;
+            scrollPositionRef.current = 0;
+          }
+          setOpenDropdown(valOpen ? null : valDropdownId);
+        }}
         aria-expanded={valOpen}
         aria-haspopup="menu"
       >
@@ -267,11 +343,15 @@ export default function FilterRulePill(props: FilterRulePillProps) {
       )}
 
       {/* Value menu */}
-      {valVisible && createPortal(
+      {createPortal(
         <div 
           className={cls.panel} 
           role="menu" 
-          style={{ top: valPosition.top, left: valPosition.left }}
+          style={{ 
+            top: valPosition.top, 
+            left: valPosition.left,
+            display: valVisible ? 'block' : 'none'
+          }}
           data-dropdown={valDropdownId}
         >
           {/* Search input - sticky at top (hidden for Medical Entity) */}
@@ -289,7 +369,7 @@ export default function FilterRulePill(props: FilterRulePillProps) {
           )}
           
           {/* Filtered values */}
-          <div className={cls.valuesContainer}>
+          <div className={cls.valuesContainer} ref={setValuesContainerRef}>
             {filteredValues.length === 0 ? (
               <div className={cls.noResults}>No matches</div>
             ) : (
@@ -299,10 +379,15 @@ export default function FilterRulePill(props: FilterRulePillProps) {
                 return (
                   <button
                     key={opt.id}
+                    type="button"
                     role="menuitemcheckbox"
                     aria-checked={checked}
                     className={cls.valueRow}
-                    onClick={() => toggle(opt.id)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggle(opt.id);
+                    }}
                   >
                     <span 
                       className={`${cls.checkbox} ${checked ? cls.checked : ""}`}
@@ -320,7 +405,7 @@ export default function FilterRulePill(props: FilterRulePillProps) {
             )}
           </div>
         </div>,
-        document.body
+        portalHostRef.current || document.body
       )}
     </div>
   );

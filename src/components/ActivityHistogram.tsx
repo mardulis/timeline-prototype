@@ -26,7 +26,10 @@ const ActivityHistogram: React.FC<EnhancedActivityHistogramProps> = ({
   isPreviewVisible = false,
   onYearClick,
   onMonthClick,
-  onDayClick
+  onDayClick,
+  onScaleChange,
+  onYearChange,
+  onMonthChange
 }) => {
   const renderMinimap = () => {
     switch (scale) {
@@ -38,6 +41,8 @@ const ActivityHistogram: React.FC<EnhancedActivityHistogramProps> = ({
             onBarClick={onBarClick}
             isPreviewVisible={isPreviewVisible}
             onYearClick={onYearClick}
+            onScaleChange={onScaleChange}
+            onYearChange={onYearChange}
           />
         );
       case 'month':
@@ -50,6 +55,8 @@ const ActivityHistogram: React.FC<EnhancedActivityHistogramProps> = ({
             onBarClick={onBarClick}
             onMonthClick={onMonthClick}
             isPreviewVisible={isPreviewVisible}
+            onScaleChange={onScaleChange}
+            onMonthChange={onMonthChange}
           />
         );
       case 'day':
