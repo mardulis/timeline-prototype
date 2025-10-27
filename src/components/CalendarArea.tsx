@@ -765,8 +765,8 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
   }, [scale, selectedDocId]);
 
 
-  const handleDocSelect = (doc: Doc) => {
-    onSelect?.(doc);
+  const handleDocSelect = (doc: Doc, itemId?: string) => {
+    onSelect?.(doc, itemId); // Pass itemId through for child entity highlighting
     
     // When a new document is selected, update the date but don't scroll
     const docDate = new Date(doc.date);

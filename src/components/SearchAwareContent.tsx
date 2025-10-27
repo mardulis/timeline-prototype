@@ -47,7 +47,7 @@ interface SearchAwareContentProps {
   range: { start: Date; end: Date };
   docs: Doc[]; // Original docs array
   selectedDocId?: string;
-  onSelect: (doc: Doc) => void;
+  onSelect: (doc: Doc, itemId?: string) => void;
   onNavigate?: (direction: 'prev' | 'next') => void;
   highlightedMonth?: { year: number; month: number };
   highlightedDate?: Date | null;

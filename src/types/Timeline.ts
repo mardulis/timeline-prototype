@@ -72,7 +72,7 @@ export interface CalendarAreaProps {
   onScaleChange?: (s: TimeScale) => void;
   onModeChange?: (m: Mode) => void;
   onScrub?: (date: Date) => void;
-  onSelect?: (doc: Doc) => void;
+  onSelect?: (doc: Doc, itemId?: string) => void; // itemId for child entity selection
   isPreviewVisible?: boolean;
   currentYear?: number;
   currentMonth?: number; // Added for day view
