@@ -224,38 +224,24 @@ function applyFilters(docs: Doc[], query: string, filters: SearchFilters, viewMo
   }
   
   // Apply medical entity filters
+  // Medical Entity filter means "has ANY items in this category", not specific values
   if (filters.medical) {
     filtered = filtered.filter(doc => {
       const { medications, diagnoses, labs } = filters.medical!;
       
-      // Check medications
+      // Check medications - if medical.medications is set, doc must have at least 1 medication
       if (medications && medications.length > 0) {
-        const hasMatchingMed = doc.medications?.some(med => 
-          medications.some(filterMed => 
-            med.toLowerCase().includes(filterMed.toLowerCase())
-          )
-        );
-        if (!hasMatchingMed) return false;
+        if (!doc.medications || doc.medications.length === 0) return false;
       }
       
-      // Check diagnoses
+      // Check diagnoses - if medical.diagnoses is set, doc must have at least 1 diagnosis
       if (diagnoses && diagnoses.length > 0) {
-        const hasMatchingDiag = doc.diagnoses?.some(diag => 
-          diagnoses.some(filterDiag => 
-            diag.toLowerCase().includes(filterDiag.toLowerCase())
-          )
-        );
-        if (!hasMatchingDiag) return false;
+        if (!doc.diagnoses || doc.diagnoses.length === 0) return false;
       }
       
-      // Check labs
+      // Check labs - if medical.labs is set, doc must have at least 1 lab
       if (labs && labs.length > 0) {
-        const hasMatchingLab = doc.labs?.some(lab => 
-          labs.some(filterLab => 
-            lab.toLowerCase().includes(filterLab.toLowerCase())
-          )
-        );
-        if (!hasMatchingLab) return false;
+        if (!doc.labs || doc.labs.length === 0) return false;
       }
       
       return true;
