@@ -1553,88 +1553,16 @@ export function FilterBar() {
                             // Close the more filters dropdown FIRST
                             closeMoreFilters();
                             
-                            // Handle different filter types - Create pills without values, then open value menu
-                            if (filter.key === 'date') {
-                              // Date filter - create pill without value, mark as newly created
-                              setNewlyCreatedPills(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add('date');
-                                return newSet;
-                              });
-                              // Add to creation order and create empty filter
-                              const newFilters = addToCreationOrder('date', { ...filters, date: {} });
-                              setFilters(newFilters);
-                            } else if (filter.key === 'facility') {
-                              // Facility filter - create pill without value, mark as newly created
-                              setNewlyCreatedPills(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add('facility');
-                                return newSet;
-                              });
-                              // Add to creation order and create empty filter
-                              const newFilters = addToCreationOrder('facility', { ...filters, facility: { values: [] } });
-                              setFilters(newFilters);
-                            } else if (filter.key === 'medical') {
-                              // Medical Entity filter - create pill without value, mark as newly created
-                              setNewlyCreatedPills(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add('medical');
-                                return newSet;
-                              });
-                              // Add to creation order and create empty filter
-                              const newFilters = addToCreationOrder('medical', { ...filters, medical: { medications: [], diagnoses: [], labs: [] } });
-                              setFilters(newFilters);
-                            } else if (filter.key === 'author') {
-                              // Author filter - create pill without value, mark as newly created
-                              setNewlyCreatedPills(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add('author');
-                                return newSet;
-                              });
-                              // Add to creation order and create empty filter
-                              const newFilters = addToCreationOrder('author', { ...filters, author: { values: [] } });
-                              setFilters(newFilters);
-                            } else if (filter.key === 'docType') {
-                              // DocType filter - create pill without value, mark as newly created
-                              setNewlyCreatedPills(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add('docType');
-                                return newSet;
-                              });
-                              // Add to creation order and create empty filter
-                              const newFilters = addToCreationOrder('docType', { ...filters, docType: { values: [] } });
-                              setFilters(newFilters);
-                            } else if (filter.key === 'medications') {
-                              // Medications filter - create pill without value, mark as newly created
-                              setNewlyCreatedPills(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add('medications');
-                                return newSet;
-                              });
-                              // Add to creation order and create empty filter
-                              const newFilters = addToCreationOrder('medications', { ...filters, medications: { values: [] } });
-                              setFilters(newFilters);
-                            } else if (filter.key === 'diagnoses') {
-                              // Diagnoses filter - create pill without value, mark as newly created
-                              setNewlyCreatedPills(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add('diagnoses');
-                                return newSet;
-                              });
-                              // Add to creation order and create empty filter
-                              const newFilters = addToCreationOrder('diagnoses', { ...filters, diagnoses: { values: [] } });
-                              setFilters(newFilters);
-                            } else if (filter.key === 'labs') {
-                              // Labs filter - create pill without value, mark as newly created
-                              setNewlyCreatedPills(prev => {
-                                const newSet = new Set(prev);
-                                newSet.add('labs');
-                                return newSet;
-                              });
-                              // Add to creation order and create empty filter
-                              const newFilters = addToCreationOrder('labs', { ...filters, labs: { values: [] } });
-                              setFilters(newFilters);
-                            }
+                            // Mark as newly created and open the dropdown
+                            // Don't create the filter yet - it will be created when a value is selected
+                            setNewlyCreatedPills(prev => {
+                              const newSet = new Set(prev);
+                              newSet.add(filter.key);
+                              return newSet;
+                            });
+                            
+                            // Open the value dropdown (same as clicking the dashed button)
+                            setActiveQuickFilter(filter.key);
                           }}>
                             <img src={filter.icon} alt={filter.label} width="16" height="16" />
                             {filter.label}
