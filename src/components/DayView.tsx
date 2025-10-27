@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import styled from 'styled-components';
-import { ViewProps, Doc } from '../types/Timeline';
+import { ViewProps, Doc, ChildEntityItem } from '../types/Timeline';
 import { useSearch } from '../features/search/SearchCtx';
 import { highlightText } from '../features/search/highlight';
-import { getDocumentDisplayContent, getViewModeIcon, getViewModeIconAlt } from '../utils/viewModeHelpers';
+import { expandDocumentsToChildEntities, getViewModeIcon, getViewModeIconAlt } from '../utils/viewModeHelpers';
 
 const DayViewContainer = styled.div`
   flex: 1;
@@ -224,18 +224,24 @@ const EmptyColumn = styled.div`
 const DayView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocId, onSelect, highlightedMonth, highlightedDate, currentYear = 2021, currentMonth = 0 }) => {
   const { query } = useSearch();
   
-  // Group documents by day for the current month
+  // Expand documents into child entities based on viewMode
+  const items = useMemo(() => 
+    expandDocumentsToChildEntities(docs, viewMode),
+    [docs, viewMode]
+  );
+  
+  // Group items (docs or child entities) by day for the current month
   const dayGroups = useMemo(() => {
-    const groups: { [day: string]: Doc[] } = {};
+    const groups: { [day: string]: (Doc | ChildEntityItem)[] } = {};
     
-    docs.forEach(doc => {
-      const docDate = new Date(doc.date);
-      if (docDate.getFullYear() === currentYear && docDate.getMonth() === currentMonth) {
-        const day = docDate.getDate().toString();
+    items.forEach(item => {
+      const itemDate = new Date(item.date);
+      if (itemDate.getFullYear() === currentYear && itemDate.getMonth() === currentMonth) {
+        const day = itemDate.getDate().toString();
         if (!groups[day]) {
           groups[day] = [];
         }
-        groups[day].push(doc);
+        groups[day].push(item);
       }
     });
 
@@ -256,10 +262,31 @@ const DayView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocId
     }
     
     return dayArray;
-  }, [docs, currentYear, currentMonth]);
+  }, [items, currentYear, currentMonth]);
 
-  const handleDocSelect = (doc: Doc) => {
-    onSelect(doc);
+  const handleItemSelect = (item: Doc | ChildEntityItem) => {
+    // If it's a child entity, select the parent document but pass the child entity ID for highlighting
+    if ('parentDoc' in item) {
+      onSelect(item.parentDoc, item.id);
+    } else {
+      onSelect(item, item.id);
+    }
+  };
+  
+  const getItemId = (item: Doc | ChildEntityItem): string => {
+    return item.id;
+  };
+  
+  const getItemDisplayName = (item: Doc | ChildEntityItem): string => {
+    if ('entityName' in item) {
+      return item.entityName;
+    }
+    return item.title;
+  };
+  
+  const isItemSelected = (item: Doc | ChildEntityItem): boolean => {
+    // Check if this specific item is selected (not siblings)
+    return item.id === selectedDocId;
   };
 
   return (
@@ -287,47 +314,50 @@ const DayView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocId
                   {dayGroup.docs.length === 0 ? (
                     <EmptyState>No documents</EmptyState>
                   ) : (
-                    dayGroup.docs.map((doc, docIndex) => (
-                      <DocumentItem
-                        key={doc.id}
-                        isSelected={selectedDocId === doc.id}
-                        isHighlighted={highlightedMonth?.year === currentYear && highlightedMonth?.month === currentMonth}
-                        isFirst={docIndex === 0}
-                        onClick={() => handleDocSelect(doc)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleDocSelect(doc);
-                          }
-                        }}
-                        tabIndex={0}
-                        role="button"
-                        aria-pressed={selectedDocId === doc.id}
-                        data-doc-id={doc.id}
-                      >
-                        <DocumentItemContent
-                          isSelected={selectedDocId === doc.id}
+                    dayGroup.docs.map((item, itemIndex) => {
+                      const itemId = getItemId(item);
+                      const isSelected = isItemSelected(item);
+                      
+                      return (
+                        <DocumentItem
+                          key={itemId}
+                          isSelected={isSelected}
                           isHighlighted={highlightedMonth?.year === currentYear && highlightedMonth?.month === currentMonth}
+                          isFirst={itemIndex === 0}
+                          onClick={() => handleItemSelect(item)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleItemSelect(item);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-pressed={isSelected}
+                          data-doc-id={itemId}
                         >
-                          <DocumentIcon isSelected={selectedDocId === doc.id}>
-                            <img src={getViewModeIcon(viewMode)} alt={getViewModeIconAlt(viewMode)} width="16" height="16" />
-                          </DocumentIcon>
-                        
-                          <DocumentInfo>
-                            <DocumentTitle>
-                              {getDocumentDisplayContent(doc, viewMode).map((item, idx) => (
-                                <div key={idx}>{highlightText(item, query)}</div>
-                              ))}
-                            </DocumentTitle>
-                            <DocumentTime>
-                              {new Date(doc.date).toLocaleTimeString('en-US', { 
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </DocumentTime>
-                          </DocumentInfo>
-                        </DocumentItemContent>
-                      </DocumentItem>
-                    ))
+                          <DocumentItemContent
+                            isSelected={isSelected}
+                            isHighlighted={highlightedMonth?.year === currentYear && highlightedMonth?.month === currentMonth}
+                          >
+                            <DocumentIcon isSelected={isSelected}>
+                              <img src={getViewModeIcon(viewMode)} alt={getViewModeIconAlt(viewMode)} width="16" height="16" />
+                            </DocumentIcon>
+                          
+                            <DocumentInfo>
+                              <DocumentTitle>
+                                {highlightText(getItemDisplayName(item), query)}
+                              </DocumentTitle>
+                              <DocumentTime>
+                                {new Date(item.date).toLocaleTimeString('en-US', { 
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </DocumentTime>
+                            </DocumentInfo>
+                          </DocumentItemContent>
+                        </DocumentItem>
+                      );
+                    })
                   )}
                 </div>
               </DocumentList>

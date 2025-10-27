@@ -25,6 +25,16 @@ export interface Doc {
   flagged?: boolean;
 }
 
+// Child entity item - represents a single medication/diagnosis/lab from a document
+export interface ChildEntityItem {
+  id: string; // Unique ID for this child entity item (parentDocId-entityType-index)
+  entityName: string; // Name of the medication/diagnosis/lab
+  entityType: 'medication' | 'diagnosis' | 'lab'; // Type of entity
+  date: string; // Date from parent document
+  parentDocId: string; // ID of the parent document
+  parentDoc: Doc; // Reference to the parent document
+}
+
 export interface Medication {
   name: string;
   dose?: string;
@@ -81,7 +91,7 @@ export interface ViewProps {
   docs: Doc[];
   viewMode?: ViewMode; // What to display on document cards
   selectedDocId?: string;
-  onSelect: (doc: Doc) => void;
+  onSelect: (doc: Doc, itemId?: string) => void; // itemId for child entity selection
   onNavigate?: (direction: 'prev' | 'next') => void;
   highlightedMonth?: { year: number; month: number };
   highlightedDate?: Date | null; // Add highlighted date prop

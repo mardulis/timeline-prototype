@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import styled from 'styled-components';
-import { ViewProps, Doc } from '../types/Timeline';
+import { ViewProps, Doc, ChildEntityItem } from '../types/Timeline';
 import { useSearch } from '../features/search/SearchCtx';
 import { highlightText } from '../features/search/highlight';
-import { getDocumentDisplayContent, getViewModeIcon, getViewModeIconAlt } from '../utils/viewModeHelpers';
+import { expandDocumentsToChildEntities, getViewModeIcon, getViewModeIconAlt } from '../utils/viewModeHelpers';
 
 const YearViewContainer = styled.div`
   flex: 1;
@@ -235,14 +235,20 @@ const EmptyColumn = styled.div`
 const YearView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocId, onSelect, highlightedMonth, highlightedDate }) => {
   const { query } = useSearch();
   
-  // Group documents by year and then by month for all years in the dataset
+  // Expand documents into child entities based on viewMode
+  const items = useMemo(() => 
+    expandDocumentsToChildEntities(docs, viewMode),
+    [docs, viewMode]
+  );
+  
+  // Group items (docs or child entities) by year and then by month for all years in the dataset
   const yearGroups = useMemo(() => {
-    const groups: { [year: string]: { [month: string]: Doc[] } } = {};
+    const groups: { [year: string]: { [month: string]: (Doc | ChildEntityItem)[] } } = {};
     
-    docs.forEach(doc => {
-      const docDate = new Date(doc.date);
-      const year = docDate.getFullYear().toString();
-      const month = docDate.getMonth().toString();
+    items.forEach(item => {
+      const itemDate = new Date(item.date);
+      const year = itemDate.getFullYear().toString();
+      const month = itemDate.getMonth().toString();
       
       if (!groups[year]) {
         groups[year] = {};
@@ -250,7 +256,7 @@ const YearView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocI
       if (!groups[year][month]) {
         groups[year][month] = [];
       }
-      groups[year][month].push(doc);
+      groups[year][month].push(item);
     });
 
     // Use fixed year range like the minimap (2018-2025)
@@ -284,10 +290,31 @@ const YearView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocI
     }
     
     return allYears;
-  }, [docs]);
+  }, [items]);
 
-  const handleDocSelect = (doc: Doc) => {
-    onSelect(doc);
+  const handleItemSelect = (item: Doc | ChildEntityItem) => {
+    // If it's a child entity, select the parent document but pass the child entity ID for highlighting
+    if ('parentDoc' in item) {
+      onSelect(item.parentDoc, item.id);
+    } else {
+      onSelect(item, item.id);
+    }
+  };
+  
+  const getItemId = (item: Doc | ChildEntityItem): string => {
+    return item.id;
+  };
+  
+  const getItemDisplayName = (item: Doc | ChildEntityItem): string => {
+    if ('entityName' in item) {
+      return item.entityName;
+    }
+    return item.title;
+  };
+  
+  const isItemSelected = (item: Doc | ChildEntityItem): boolean => {
+    // Check if this specific item is selected (not siblings)
+    return item.id === selectedDocId;
   };
 
   return (
@@ -324,48 +351,51 @@ const YearView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocI
                         >
                           {monthGroup.monthName}
                         </MonthHeader>
-                        {monthGroup.docs.map((doc, docIndex) => (
-                          <DocumentItem
-                            key={doc.id}
-                            isSelected={selectedDocId === doc.id}
-                            isHighlighted={highlightedMonth?.year === yearGroup.year && highlightedMonth?.month === monthGroup.month}
-                            isFirst={docIndex === 0}
-                            onClick={() => handleDocSelect(doc)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleDocSelect(doc);
-                              }
-                            }}
-                            tabIndex={0}
-                            role="button"
-                            aria-pressed={selectedDocId === doc.id}
-                            data-doc-id={doc.id}
-                          >
-                            <DocumentItemContent
-                              isSelected={selectedDocId === doc.id}
+                        {monthGroup.docs.map((item, itemIndex) => {
+                          const itemId = getItemId(item);
+                          const isSelected = isItemSelected(item);
+                          
+                          return (
+                            <DocumentItem
+                              key={itemId}
+                              isSelected={isSelected}
                               isHighlighted={highlightedMonth?.year === yearGroup.year && highlightedMonth?.month === monthGroup.month}
+                              isFirst={itemIndex === 0}
+                              onClick={() => handleItemSelect(item)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleItemSelect(item);
+                                }
+                              }}
+                              tabIndex={0}
+                              role="button"
+                              aria-pressed={isSelected}
+                              data-doc-id={itemId}
                             >
-                              <DocumentIcon isSelected={selectedDocId === doc.id}>
-                                <img src={getViewModeIcon(viewMode)} alt={getViewModeIconAlt(viewMode)} width="16" height="16" />
-                              </DocumentIcon>
-                              
-                              <DocumentInfo>
-                                <DocumentTitle>
-                                  {getDocumentDisplayContent(doc, viewMode).map((item, idx) => (
-                                    <div key={idx}>{highlightText(item, query)}</div>
-                                  ))}
-                                </DocumentTitle>
-                                <DocumentDate>
-                                  {new Date(doc.date).toLocaleDateString('en-US', { 
-                                    year: 'numeric',
-                                    month: 'short', 
-                                    day: 'numeric' 
-                                  })}
-                                </DocumentDate>
-                              </DocumentInfo>
-                            </DocumentItemContent>
-                          </DocumentItem>
-                        ))}
+                              <DocumentItemContent
+                                isSelected={isSelected}
+                                isHighlighted={highlightedMonth?.year === yearGroup.year && highlightedMonth?.month === monthGroup.month}
+                              >
+                                <DocumentIcon isSelected={isSelected}>
+                                  <img src={getViewModeIcon(viewMode)} alt={getViewModeIconAlt(viewMode)} width="16" height="16" />
+                                </DocumentIcon>
+                                
+                                <DocumentInfo>
+                                  <DocumentTitle>
+                                    {highlightText(getItemDisplayName(item), query)}
+                                  </DocumentTitle>
+                                  <DocumentDate>
+                                    {new Date(item.date).toLocaleDateString('en-US', { 
+                                      year: 'numeric',
+                                      month: 'short', 
+                                      day: 'numeric' 
+                                    })}
+                                  </DocumentDate>
+                                </DocumentInfo>
+                              </DocumentItemContent>
+                            </DocumentItem>
+                          );
+                        })}
                       </MonthGroup>
                     ))
                   )}

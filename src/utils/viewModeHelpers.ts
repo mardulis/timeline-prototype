@@ -1,4 +1,4 @@
-import { Doc, ViewMode } from '../types/Timeline';
+import { Doc, ViewMode, ChildEntityItem } from '../types/Timeline';
 
 /**
  * Filters documents based on viewMode.
@@ -76,4 +76,53 @@ export function getViewModeIconAlt(viewMode: ViewMode): string {
     default:
       return 'Document';
   }
+}
+
+/**
+ * Expands documents into child entity items based on viewMode.
+ * For 'titles' mode, returns documents as-is (wrapped as items).
+ * For entity modes, creates one item per child entity (medication/diagnosis/lab).
+ * 
+ * Example: A document with 3 medications creates 3 separate items.
+ */
+export function expandDocumentsToChildEntities(docs: Doc[], viewMode: ViewMode): ChildEntityItem[] | Doc[] {
+  if (viewMode === 'titles') {
+    return docs; // Return documents as-is for titles mode
+  }
+  
+  const childItems: ChildEntityItem[] = [];
+  
+  docs.forEach(doc => {
+    let entities: string[] = [];
+    let entityType: 'medication' | 'diagnosis' | 'lab' = 'medication';
+    
+    switch (viewMode) {
+      case 'medications':
+        entities = doc.medications || [];
+        entityType = 'medication';
+        break;
+      case 'diagnosis':
+        entities = doc.diagnoses || [];
+        entityType = 'diagnosis';
+        break;
+      case 'labs':
+        entities = doc.labs || [];
+        entityType = 'lab';
+        break;
+    }
+    
+    // Create a child entity item for each entity
+    entities.forEach((entityName, index) => {
+      childItems.push({
+        id: `${doc.id}-${entityType}-${index}`,
+        entityName,
+        entityType,
+        date: doc.date,
+        parentDocId: doc.id,
+        parentDoc: doc
+      });
+    });
+  });
+  
+  return childItems;
 }

@@ -65,6 +65,7 @@ const TimelineDashboard: React.FC = () => {
   const [mode, setMode] = useState<Mode>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('titles');
   const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | undefined>(undefined); // Track selected item (doc or child entity) for highlighting
   const [currentYear, setCurrentYear] = useState(2021);
   const [currentMonth, setCurrentMonth] = useState(0);
   const [currentDay, setCurrentDay] = useState(1);
@@ -263,12 +264,14 @@ const TimelineDashboard: React.FC = () => {
     }
   };
 
-  const handleDocSelect = (doc: Doc) => {
+  const handleDocSelect = (doc: Doc, itemId?: string) => {
     setSelectedDoc(doc);
+    setSelectedItemId(itemId || doc.id); // Use itemId if provided, otherwise use doc.id
   };
 
   const handleClosePreview = () => {
     setSelectedDoc(null);
+    setSelectedItemId(undefined);
   };
 
   const handleYearChange = (year: number) => {
@@ -341,7 +344,7 @@ const TimelineDashboard: React.FC = () => {
               viewMode={viewMode}
               range={range}
               docs={docs}
-              selectedDocId={selectedDoc?.id}
+              selectedDocId={selectedItemId} // Use selectedItemId for highlighting
               onSelect={handleDocSelect}
               highlightedDate={highlightedDate}
               currentYear={currentYear}
