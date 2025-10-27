@@ -1103,6 +1103,18 @@ export function FilterBar() {
     setShowFilterSection(!showFilterSection);
   };
   
+  // Filter metadata for all filters (used for rendering dashed buttons)
+  const filterMetadata: Record<string, { label: string; icon: string }> = {
+    'docType': { label: 'Doc type', icon: '/svg/Document.svg' },
+    'author': { label: 'Author', icon: '/svg/profile.svg' },
+    'facility': { label: 'Facility', icon: '/svg/View.svg' },
+    'labs': { label: 'Labs', icon: '/svg/Labs.svg' },
+    'date': { label: 'Date', icon: '/svg/calendar0321.svg' },
+    'medical': { label: 'Medical Entity', icon: '/svg/cells.svg' },
+    'diagnoses': { label: 'Diagnosis', icon: '/svg/Diagnosis.svg' },
+    'medications': { label: 'Medication', icon: '/svg/Medications.svg' },
+  };
+  
   // Get filters for More Filters menu (excludes pinned filters: Medical Entity, Diagnosis, Medication)
   // Also excludes Date filter per user request
   const getMoreFilters = () => {
@@ -1337,6 +1349,40 @@ export function FilterBar() {
               >
                 <img src={filter.icon} alt={filter.label} width="16" height="16" />
                 {filter.label}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 'auto' }}>
+                  <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </QuickFilterButton>
+            );
+          })}
+          
+          {/* Show dashed buttons for newly created non-pinned filters that don't have values yet */}
+          {Array.from(newlyCreatedPills).filter(key => !['medical', 'diagnoses', 'medications'].includes(key)).map(filterKey => {
+            // Check if this filter already has a value (in which case it will be rendered as a pill below)
+            const hasValue = filterHasValues(filterKey);
+            if (hasValue) return null; // Skip - will be rendered as pill below
+            
+            // Get filter metadata
+            const metadata = filterMetadata[filterKey];
+            if (!metadata) return null;
+            
+            return (
+              <QuickFilterButton
+                key={filterKey}
+                ref={(el) => {
+                  quickFilterRefs.current[filterKey] = el;
+                }}
+                onClick={() => {
+                  // Toggle dropdown menu for this filter
+                  if (activeQuickFilter === filterKey) {
+                    setActiveQuickFilter(null);
+                  } else {
+                    setActiveQuickFilter(filterKey);
+                  }
+                }}
+              >
+                <img src={metadata.icon} alt={metadata.label} width="16" height="16" />
+                {metadata.label}
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 'auto' }}>
                   <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
