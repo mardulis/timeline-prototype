@@ -23,6 +23,7 @@ export interface FilterRulePillProps {
   defaultValue?: MultiValue | SingleValue;
   onValueChange?: (v: MultiValue | SingleValue) => void;
   onClear?: () => void;
+  onDropdownClose?: () => void; // Callback when dropdown closes
   className?: string;
   style?: React.CSSProperties;
   openValueMenuInitially?: boolean; // New prop to control initial value menu state
@@ -41,6 +42,7 @@ export default function FilterRulePill(props: FilterRulePillProps) {
     defaultValue,
     onValueChange,
     onClear,
+    onDropdownClose,
     className,
     style,
     openValueMenuInitially = false
@@ -283,6 +285,10 @@ export default function FilterRulePill(props: FilterRulePillProps) {
       const target = event.target as Element;
       if (!target.closest(`[data-dropdown="${valDropdownId}"]`)) {
         setOpenDropdown(null);
+        // Notify parent that dropdown closed
+        if (onDropdownClose) {
+          onDropdownClose();
+        }
       }
     };
 
@@ -290,7 +296,7 @@ export default function FilterRulePill(props: FilterRulePillProps) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [valOpen, valDropdownId, setOpenDropdown]);
+  }, [valOpen, valDropdownId, setOpenDropdown, onDropdownClose]);
 
   return (
     <div className={`${cls.pill} ${className || ''}`} style={style}>

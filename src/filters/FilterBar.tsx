@@ -470,15 +470,65 @@ export function FilterBar() {
     }
   }, [activeQuickFilter]);
   
-  // Clear newly created pills state after they've been rendered
-  React.useEffect(() => {
-    if (newlyCreatedPills.size > 0) {
-      const timer = setTimeout(() => {
-        setNewlyCreatedPills(new Set());
-      }, 100); // Small delay to ensure the pill renders with open menu
-      return () => clearTimeout(timer);
+  // Note: We don't automatically clear newlyCreatedPills with a timeout anymore.
+  // Instead, pills are removed from newlyCreatedPills when:
+  // 1. A value is selected (pill becomes permanent) - handled in handleFilterDropdownClose
+  // 2. Dropdown closes without a value (pill is removed) - handled in handleFilterDropdownClose
+  
+  // Helper function to check if a filter has values
+  const filterHasValues = (filterKey: string): boolean => {
+    switch (filterKey) {
+      case 'author':
+        return (filters.author?.values?.length ?? 0) > 0;
+      case 'facility':
+        return (filters.facility?.values?.length ?? 0) > 0;
+      case 'docType':
+        return (filters.docType?.values?.length ?? 0) > 0;
+      case 'medications':
+        return (filters.medications?.values?.length ?? 0) > 0;
+      case 'diagnoses':
+        return (filters.diagnoses?.values?.length ?? 0) > 0;
+      case 'labs':
+        return (filters.labs?.values?.length ?? 0) > 0;
+      case 'medical':
+        return (
+          (filters.medical?.medications?.length ?? 0) > 0 ||
+          (filters.medical?.diagnoses?.length ?? 0) > 0 ||
+          (filters.medical?.labs?.length ?? 0) > 0
+        );
+      case 'date':
+        return !!(filters.date?.start || filters.date?.end);
+      default:
+        return false;
     }
-  }, [newlyCreatedPills]);
+  };
+  
+  // Handler for when a filter dropdown closes - remove empty filters
+  const handleFilterDropdownClose = (filterKey: string) => {
+    // Only check newly created pills (temporary filters)
+    if (newlyCreatedPills.has(filterKey)) {
+      // If filter has no values, remove it
+      if (!filterHasValues(filterKey)) {
+        const updatedFilters = removeFromCreationOrder(filterKey, { ...filters });
+        delete (updatedFilters as any)[filterKey];
+        setFilters(updatedFilters);
+        
+        // Remove from newly created pills tracking
+        setNewlyCreatedPills(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(filterKey);
+          return newSet;
+        });
+      } else {
+        // Filter has values, it's now permanent - remove from tracking
+        setNewlyCreatedPills(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(filterKey);
+          return newSet;
+        });
+      }
+    }
+  };
   
   // Keep menu open even if quick filter button disappears (when pill is created)
   // Only close menu when user explicitly clicks outside or selects single-select item
@@ -1233,6 +1283,7 @@ export function FilterBar() {
                     }}
                     onClear={() => handleMedicalChange({})}
                     openValueMenuInitially={newlyCreatedPills.has('medical')}
+                    onDropdownClose={() => handleFilterDropdownClose('medical')}
                   />
                 );
               } else if (filter.key === 'diagnoses') {
@@ -1247,6 +1298,7 @@ export function FilterBar() {
                     onClear={() => handleDiagnosesChange([])}
                     onOperatorChange={handleDiagnosesOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('diagnoses')}
+                    onDropdownClose={() => handleFilterDropdownClose('diagnoses')}
                   />
                 );
               } else if (filter.key === 'medications') {
@@ -1261,6 +1313,7 @@ export function FilterBar() {
                     onClear={() => handleMedicationsChange([])}
                     onOperatorChange={handleMedicationsOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('medications')}
+                    onDropdownClose={() => handleFilterDropdownClose('medications')}
                   />
                 );
               }
@@ -1323,6 +1376,7 @@ export function FilterBar() {
                       }
                     }}
                     onClear={() => handleDateChange({})}
+                    onDropdownClose={() => handleFilterDropdownClose('date')}
                   />
                 );
               
@@ -1338,6 +1392,7 @@ export function FilterBar() {
                     onClear={() => handleFacilityChange([])}
                     onOperatorChange={handleFacilityOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('facility')}
+                    onDropdownClose={() => handleFilterDropdownClose('facility')}
                   />
                 );
               
@@ -1374,6 +1429,7 @@ export function FilterBar() {
                     }}
                     onClear={() => handleMedicalChange({})}
                     openValueMenuInitially={newlyCreatedPills.has('medical')}
+                    onDropdownClose={() => handleFilterDropdownClose('medical')}
                   />
                 );
               
@@ -1389,6 +1445,7 @@ export function FilterBar() {
                     onClear={() => handleAuthorChange([])}
                     onOperatorChange={handleAuthorOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('author')}
+                    onDropdownClose={() => handleFilterDropdownClose('author')}
                   />
                 );
               
@@ -1404,6 +1461,7 @@ export function FilterBar() {
                     onClear={() => handleDocTypeChange([])}
                     onOperatorChange={handleDocTypeOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('docType')}
+                    onDropdownClose={() => handleFilterDropdownClose('docType')}
                   />
                 );
               
@@ -1419,6 +1477,7 @@ export function FilterBar() {
                     onClear={() => handleMedicationsChange([])}
                     onOperatorChange={handleMedicationsOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('medications')}
+                    onDropdownClose={() => handleFilterDropdownClose('medications')}
                   />
                 );
               
@@ -1434,6 +1493,7 @@ export function FilterBar() {
                     onClear={() => handleDiagnosesChange([])}
                     onOperatorChange={handleDiagnosesOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('diagnoses')}
+                    onDropdownClose={() => handleFilterDropdownClose('diagnoses')}
                   />
                 );
               
@@ -1449,6 +1509,7 @@ export function FilterBar() {
                     onClear={() => handleLabsChange([])}
                     onOperatorChange={handleLabsOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('labs')}
+                    onDropdownClose={() => handleFilterDropdownClose('labs')}
                   />
                 );
               
