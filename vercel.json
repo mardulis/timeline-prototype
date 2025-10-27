@@ -9,5 +9,10 @@
     }
   ],
   "buildCommand": "npm run build",
-  "outputDirectory": "build"
+  "outputDirectory": "build",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
 }
