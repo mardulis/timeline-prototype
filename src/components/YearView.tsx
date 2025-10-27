@@ -294,10 +294,13 @@ const YearView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocI
 
   const handleItemSelect = (item: Doc | ChildEntityItem) => {
     // If it's a child entity, select the parent document but pass the child entity ID for highlighting
-    if ('parentDoc' in item) {
-      onSelect(item.parentDoc, item.id);
+    const isChildEntity = (item as ChildEntityItem).parentDoc !== undefined;
+    if (isChildEntity) {
+      const childEntity = item as ChildEntityItem;
+      onSelect(childEntity.parentDoc, childEntity.id);
     } else {
-      onSelect(item, item.id);
+      const doc = item as Doc;
+      onSelect(doc, doc.id);
     }
   };
   
@@ -306,10 +309,11 @@ const YearView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocI
   };
   
   const getItemDisplayName = (item: Doc | ChildEntityItem): string => {
-    if ('entityName' in item) {
-      return item.entityName;
+    const isChildEntity = (item as ChildEntityItem).entityName !== undefined;
+    if (isChildEntity) {
+      return (item as ChildEntityItem).entityName;
     }
-    return item.title;
+    return (item as Doc).title;
   };
   
   const isItemSelected = (item: Doc | ChildEntityItem): boolean => {
