@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { ViewProps, Doc } from '../types/Timeline';
 import { useSearch } from '../features/search/SearchCtx';
 import { highlightText } from '../features/search/highlight';
+import { getDocumentDisplayContent, getViewModeIcon, getViewModeIconAlt } from '../utils/viewModeHelpers';
 
 const YearViewContainer = styled.div`
   flex: 1;
@@ -231,8 +232,9 @@ const EmptyColumn = styled.div`
   background: transparent;
 `;
 
-const YearView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlightedMonth, highlightedDate }) => {
+const YearView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocId, onSelect, highlightedMonth, highlightedDate }) => {
   const { query } = useSearch();
+  
   // Group documents by year and then by month for all years in the dataset
   const yearGroups = useMemo(() => {
     const groups: { [year: string]: { [month: string]: Doc[] } } = {};
@@ -344,11 +346,15 @@ const YearView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highligh
                               isHighlighted={highlightedMonth?.year === yearGroup.year && highlightedMonth?.month === monthGroup.month}
                             >
                               <DocumentIcon isSelected={selectedDocId === doc.id}>
-                                <img src="/svg/Document.svg" alt="Document" width="16" height="16" />
+                                <img src={getViewModeIcon(viewMode)} alt={getViewModeIconAlt(viewMode)} width="16" height="16" />
                               </DocumentIcon>
                               
                               <DocumentInfo>
-                                <DocumentTitle>{highlightText(doc.title, query)}</DocumentTitle>
+                                <DocumentTitle>
+                                  {getDocumentDisplayContent(doc, viewMode).map((item, idx) => (
+                                    <div key={idx}>{highlightText(item, query)}</div>
+                                  ))}
+                                </DocumentTitle>
                                 <DocumentDate>
                                   {new Date(doc.date).toLocaleDateString('en-US', { 
                                     year: 'numeric',

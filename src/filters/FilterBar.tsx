@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { Popover } from '../design-system/adapters';
 import FilterRulePill from '../components/FilterRulePill/FilterRulePill';
 import MultiselectFilter from '../components/MultiselectFilter';
 import { useSearch } from '../features/search/SearchCtx';
 import { useDropdown } from '../contexts/DropdownContext';
+import { ViewMode } from '../types/Timeline';
 
 const FilterBarContainer = styled.div`
   display: flex;
@@ -1134,7 +1135,7 @@ export function FilterBar() {
   
   const moreFilters = getMoreFilters();
   
-      return (
+  return (
         <FilterBarContainer>
           {/* Search input row */}
           <SearchRow>

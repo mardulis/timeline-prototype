@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import { Doc } from '../../types/Timeline';
+import { Doc, ViewMode } from '../../types/Timeline';
 
 export interface SearchFilters {
   date?: {
@@ -52,6 +52,7 @@ export interface SearchContextType {
   results: Doc[];
   allDocs: Doc[]; // Original unfiltered documents
   clearFilters: () => void;
+  viewMode: ViewMode; // Current view mode for search
 }
 
 const SearchContext = createContext<SearchContextType | null>(null);
@@ -64,16 +65,17 @@ export function useSearch() {
   return context;
 }
 
-export function SearchProvider({ docs, children }: { 
+export function SearchProvider({ docs, viewMode = 'titles', children }: { 
   docs: Doc[]; 
+  viewMode?: ViewMode;
   children: React.ReactNode 
 }) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<SearchFilters>({});
   
   const results = useMemo(() => {
-    return applyFilters(docs, query, filters);
-  }, [docs, query, filters]);
+    return applyFilters(docs, query, filters, viewMode);
+  }, [docs, query, filters, viewMode]);
   
   const clearFilters = () => {
     setQuery('');
@@ -88,24 +90,50 @@ export function SearchProvider({ docs, children }: {
       setFilters,
       results,
       allDocs: docs, // Expose original unfiltered documents
-      clearFilters
+      clearFilters,
+      viewMode
     }}>
       {children}
     </SearchContext.Provider>
   );
 }
 
-function applyFilters(docs: Doc[], query: string, filters: SearchFilters): Doc[] {
+function applyFilters(docs: Doc[], query: string, filters: SearchFilters, viewMode: ViewMode = 'titles'): Doc[] {
   let filtered = docs;
   
-  // Apply text search
+  // Apply text search based on viewMode
   if (query.trim()) {
     const searchTerm = query.toLowerCase();
-    filtered = filtered.filter(doc => 
-      doc.title.toLowerCase().includes(searchTerm) ||
-      doc.author?.toLowerCase().includes(searchTerm) ||
-      doc.facility?.toLowerCase().includes(searchTerm)
-    );
+    filtered = filtered.filter(doc => {
+      switch (viewMode) {
+        case 'titles':
+          // Search in title, author, and facility
+          return doc.title.toLowerCase().includes(searchTerm) ||
+                 doc.author?.toLowerCase().includes(searchTerm) ||
+                 doc.facility?.toLowerCase().includes(searchTerm);
+        
+        case 'medications':
+          // Search in medications array
+          return doc.medications?.some(med => 
+            med.toLowerCase().includes(searchTerm)
+          ) || false;
+        
+        case 'diagnosis':
+          // Search in diagnoses array
+          return doc.diagnoses?.some(diag => 
+            diag.toLowerCase().includes(searchTerm)
+          ) || false;
+        
+        case 'labs':
+          // Search in labs array
+          return doc.labs?.some(lab => 
+            lab.toLowerCase().includes(searchTerm)
+          ) || false;
+        
+        default:
+          return doc.title.toLowerCase().includes(searchTerm);
+      }
+    });
   }
   
   // Apply date filter with operators

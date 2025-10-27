@@ -6,7 +6,7 @@ import SearchAndControls from './SearchAndControls';
 import { SearchAwareContent } from './SearchAwareContent';
 import CSVErrorState from './CSVErrorState';
 import CSVLoadingState from './CSVLoadingState';
-import { TimeScale, Mode, Doc, DocumentPreviewData } from '../types/Timeline';
+import { TimeScale, Mode, Doc, DocumentPreviewData, ViewMode } from '../types/Timeline';
 import { loadCSVDocuments, loadTestCSVDocuments, parseCSV, generateRandomDOL } from '../utils/csvParser';
 import { SearchProvider } from '../features/search/SearchCtx';
 
@@ -63,6 +63,7 @@ const convertDocToPreviewData = (doc: Doc): DocumentPreviewData => {
 const TimelineDashboard: React.FC = () => {
   const [scale, setScale] = useState<TimeScale>('year');
   const [mode, setMode] = useState<Mode>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('titles');
   const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
   const [currentYear, setCurrentYear] = useState(2021);
   const [currentMonth, setCurrentMonth] = useState(0);
@@ -297,7 +298,7 @@ const TimelineDashboard: React.FC = () => {
   };
 
   return (
-    <SearchProvider docs={docs}>
+    <SearchProvider docs={docs} viewMode={viewMode}>
       <DashboardContainer>
         <LeftSidebar />
         
@@ -320,6 +321,8 @@ const TimelineDashboard: React.FC = () => {
               onHighlightedDate={handleHighlightedDate}
               scrollToDateRef={scrollToDateRef}
               isPreviewVisible={!!selectedDoc}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
             />
           </TopSection>
           
@@ -335,6 +338,7 @@ const TimelineDashboard: React.FC = () => {
             <SearchAwareContent
               scale={scale}
               mode={mode}
+              viewMode={viewMode}
               range={range}
               docs={docs}
               selectedDocId={selectedDoc?.id}

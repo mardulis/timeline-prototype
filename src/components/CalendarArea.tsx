@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import ActivityHistogram from './ActivityHistogram';
 import YearView from './YearView';
@@ -7,6 +7,7 @@ import DayView from './DayView';
 import { CalendarAreaProps, Doc } from '../types/Timeline';
 import { computeRightOcclusionPx } from '../utils/scrollIntoViewOcclusionSafe';
 import { useSearch } from '../features/search/SearchCtx';
+import { filterDocumentsByViewMode } from '../utils/viewModeHelpers';
 
 const CalendarContainer = styled.div`
   flex: 1;
@@ -57,6 +58,7 @@ const DocumentFooter = styled.div`
 const CalendarArea: React.FC<CalendarAreaProps> = ({
   scale,
   mode,
+  viewMode = 'titles',
   range,
   docs: originalDocs, // Rename to originalDocs to avoid confusion
   selectedDocId,
@@ -78,10 +80,13 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
   onHighlightedDate
 }) => {
   // Use filtered results from search context
-  const { results: filteredDocs } = useSearch();
+  const { results: searchFilteredDocs } = useSearch();
   
-  // Use filtered docs for all operations
-  const docs = filteredDocs;
+  // Apply viewMode filtering on top of search filtering
+  const docs = useMemo(() => 
+    filterDocumentsByViewMode(searchFilteredDocs, viewMode), 
+    [searchFilteredDocs, viewMode]
+  );
   const [currentYear, setCurrentYear] = useState(propCurrentYear);
   const [currentMonth, setCurrentMonth] = useState(propCurrentMonth);
   const [currentDay, setCurrentDay] = useState(propCurrentDay);
@@ -1038,6 +1043,7 @@ const CalendarArea: React.FC<CalendarAreaProps> = ({
   const renderView = () => {
     const viewProps = {
       docs,
+      viewMode,
       selectedDocId,
       onSelect: handleDocSelect,
       onNavigate: (direction: 'prev' | 'next') => {

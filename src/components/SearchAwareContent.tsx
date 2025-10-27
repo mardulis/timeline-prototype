@@ -5,7 +5,7 @@ import DocumentPreview from './DocumentPreview';
 import { DataLoadingState } from './DataLoadingState';
 import { EmptyState } from './EmptyState';
 import { useSearch } from '../features/search/SearchCtx';
-import { TimeScale, Mode, Doc, DocumentPreviewData } from '../types/Timeline';
+import { TimeScale, Mode, Doc, DocumentPreviewData, ViewMode } from '../types/Timeline';
 
 const ContentRow = styled.div`
   flex: 1;
@@ -43,6 +43,7 @@ const DocumentPreviewPanel = styled.div<{ isVisible: boolean }>`
 interface SearchAwareContentProps {
   scale: TimeScale;
   mode: Mode;
+  viewMode?: ViewMode;
   range: { start: Date; end: Date };
   docs: Doc[]; // Original docs array
   selectedDocId?: string;
@@ -71,6 +72,7 @@ interface SearchAwareContentProps {
 export function SearchAwareContent({
   scale,
   mode,
+  viewMode = 'titles',
   range,
   docs,
   selectedDocId,
@@ -138,6 +140,7 @@ export function SearchAwareContent({
         <CalendarArea
           scale={scale}
           mode={mode}
+          viewMode={viewMode}
           range={range}
           docs={results}
           selectedDocId={selectedDocId}

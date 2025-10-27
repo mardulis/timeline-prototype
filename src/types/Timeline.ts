@@ -8,6 +8,8 @@ export type Mode =
   | 'category_sort_2025'
   | 'billing_finances';
 
+export type ViewMode = 'titles' | 'medications' | 'diagnosis' | 'labs';
+
 export interface Doc {
   id: string;
   title: string;
@@ -53,6 +55,7 @@ export interface DocumentPreviewData {
 export interface CalendarAreaProps {
   scale: TimeScale;
   mode: Mode;
+  viewMode?: ViewMode; // What to display on document cards
   range: { start: Date; end: Date };
   docs: Doc[];
   selectedDocId?: string;
@@ -76,6 +79,7 @@ export interface CalendarAreaProps {
 
 export interface ViewProps {
   docs: Doc[];
+  viewMode?: ViewMode; // What to display on document cards
   selectedDocId?: string;
   onSelect: (doc: Doc) => void;
   onNavigate?: (direction: 'prev' | 'next') => void;
@@ -122,6 +126,8 @@ export interface SearchAndControlsProps {
   onHighlightedDate?: (date: Date | null) => void; // Callback when date is highlighted
   scrollToDateRef?: React.MutableRefObject<((date: Date) => void) | null>; // Ref to trigger scrolling to specific date
   isPreviewVisible?: boolean; // Whether document preview panel is visible
+  viewMode?: ViewMode; // Current view mode
+  onViewModeChange?: (mode: ViewMode) => void; // Callback when view mode changes
 }
 
 export interface DocumentPreviewProps {

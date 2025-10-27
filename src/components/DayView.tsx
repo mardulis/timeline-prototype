@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { ViewProps, Doc } from '../types/Timeline';
 import { useSearch } from '../features/search/SearchCtx';
 import { highlightText } from '../features/search/highlight';
+import { getDocumentDisplayContent, getViewModeIcon, getViewModeIconAlt } from '../utils/viewModeHelpers';
 
 const DayViewContainer = styled.div`
   flex: 1;
@@ -220,8 +221,9 @@ const EmptyColumn = styled.div`
   background: transparent;
 `;
 
-const DayView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlightedMonth, highlightedDate, currentYear = 2021, currentMonth = 0 }) => {
+const DayView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDocId, onSelect, highlightedMonth, highlightedDate, currentYear = 2021, currentMonth = 0 }) => {
   const { query } = useSearch();
+  
   // Group documents by day for the current month
   const dayGroups = useMemo(() => {
     const groups: { [day: string]: Doc[] } = {};
@@ -307,11 +309,15 @@ const DayView: React.FC<ViewProps> = ({ docs, selectedDocId, onSelect, highlight
                           isHighlighted={highlightedMonth?.year === currentYear && highlightedMonth?.month === currentMonth}
                         >
                           <DocumentIcon isSelected={selectedDocId === doc.id}>
-                            <img src="/svg/Document.svg" alt="Document" width="16" height="16" />
+                            <img src={getViewModeIcon(viewMode)} alt={getViewModeIconAlt(viewMode)} width="16" height="16" />
                           </DocumentIcon>
                         
                           <DocumentInfo>
-                            <DocumentTitle>{highlightText(doc.title, query)}</DocumentTitle>
+                            <DocumentTitle>
+                              {getDocumentDisplayContent(doc, viewMode).map((item, idx) => (
+                                <div key={idx}>{highlightText(item, query)}</div>
+                              ))}
+                            </DocumentTitle>
                             <DocumentTime>
                               {new Date(doc.date).toLocaleTimeString('en-US', { 
                                 hour: '2-digit',

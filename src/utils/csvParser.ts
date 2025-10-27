@@ -345,10 +345,10 @@ const parseCSVLine = (line: string): string[] => {
 // Load CSV from public folder
 export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
   try {
-    const response = await fetch('/csv/Test.csv'); // Back to original Test.csv
+    const response = await fetch('/csv/Case 2.csv'); // Default to Case 2.csv
     if (!response.ok) {
       if (process.env.NODE_ENV === 'development') {
-        console.error(`Failed to load Test.csv: ${response.statusText}`);
+        console.error(`Failed to load Case 2.csv: ${response.statusText}`);
       }
       return [];
     }
@@ -356,7 +356,7 @@ export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
     const csvContent = await response.text();
     if (!csvContent || csvContent.trim().length === 0) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Test.csv file is empty');
+        console.error('Case 2.csv file is empty');
       }
       return [];
     }
@@ -364,7 +364,7 @@ export const loadCSVDocuments = async (): Promise<DocumentData[]> => {
     return parseCSV(csvContent);
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('Error loading Test.csv:', error);
+      console.error('Error loading Case 2.csv:', error);
     }
     return [];
   }
