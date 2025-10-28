@@ -1303,90 +1303,69 @@ export function FilterBar() {
             let hasValue = false;
             let activeFilter = null;
             
-            if (filter.key === 'medical') {
-              const medical = filters.medical || { medications: [], diagnoses: [], labs: [] };
-              hasValue = (medical.medications?.length || 0) > 0 || 
-                        (medical.diagnoses?.length || 0) > 0 || 
-                        (medical.labs?.length || 0) > 0;
+            if (filter.key === 'title') {
+              hasValue = (filters.title?.values || []).length > 0;
               if (hasValue) {
-                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'medical');
+                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'title');
               }
-            } else if (filter.key === 'diagnoses') {
-              hasValue = (filters.diagnoses?.values || []).length > 0;
+            } else if (filter.key === 'date') {
+              hasValue = !!(filters.date?.start || filters.date?.end);
               if (hasValue) {
-                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'diagnoses');
+                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'date');
               }
-            } else if (filter.key === 'medications') {
-              hasValue = (filters.medications?.values || []).length > 0;
+            } else if (filter.key === 'author') {
+              hasValue = (filters.author?.values || []).length > 0;
               if (hasValue) {
-                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'medications');
+                activeFilter = getActiveFiltersInOrder().find(f => f.type === 'author');
               }
             }
             
             // If filter has a value, render the pill in this position
             if (hasValue && activeFilter) {
-              if (filter.key === 'medical') {
+              if (filter.key === 'title') {
+                return (
+                  <MultiselectFilter
+                    key="title"
+                    label="Title"
+                    icon={<img src="/svg/Document.svg" alt="Title" width="16" height="16" />}
+                    values={allPossibleTitles.map(title => ({ id: title, label: title }))}
+                    selectedValues={activeFilter.data?.values || []}
+                    onValueChange={handleTitleChange}
+                    onClear={handleTitleClear}
+                    openValueMenuInitially={false}
+                    // Fixed filters should never call onDropdownClose - they're always present
+                  />
+                );
+              } else if (filter.key === 'date') {
                 return (
                   <FilterRulePill
-                    key={`medical-${JSON.stringify(activeFilter.data)}`}
-                    label="Medical Entity"
-                    icon={<img src="/svg/cells.svg" alt="Medical Entity" width="16" height="16" />}
+                    key="date"
+                    label="Date"
+                    icon={<img src="/svg/calendar0321.svg" alt="Date" width="16" height="16" />}
                     operators={[
-                      { id: 'has', label: 'Has' },
-                      { id: 'has-any-of', label: 'Has any of' }
+                      { id: 'is', label: 'Is' },
+                      { id: 'before', label: 'Before' },
+                      { id: 'after', label: 'After' },
+                      { id: 'between', label: 'Between' }
                     ]}
-                    values={[
-                      { id: 'medications', label: 'Medications' },
-                      { id: 'diagnoses', label: 'Diagnoses' },
-                      { id: 'labs', label: 'Labs' }
-                    ]}
-                    value={(() => {
-                      const medical = activeFilter.data || { medications: [], diagnoses: [], labs: [] };
-                      const selectedValues = [];
-                      if (medical.medications?.length) selectedValues.push('medications');
-                      if (medical.diagnoses?.length) selectedValues.push('diagnoses');
-                      if (medical.labs?.length) selectedValues.push('labs');
-                      return selectedValues;
-                    })()}
-                    multiple={true}
-                    onValueChange={(value: string[] | string | null) => {
-                      const selectedCategories = value as string[] || [];
-                      const medications = selectedCategories.includes('medications') ? ['Aspirin', 'Metformin'] : [];
-                      const diagnoses = selectedCategories.includes('diagnoses') ? ['Diabetes', 'Hypertension'] : [];
-                      const labs = selectedCategories.includes('labs') ? ['Blood Test', 'Urine Test'] : [];
-                      handleMedicalChange({ medications, diagnoses, labs });
-                    }}
-                    onClear={() => handleMedicalChange({})}
+                    values={[]}
+                    value={null}
+                    onValueChange={() => {}}
+                    onClear={() => setFilters({ ...filters, date: undefined })}
                     openValueMenuInitially={false}
                     // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
-              } else if (filter.key === 'diagnoses') {
+              } else if (filter.key === 'author') {
                 return (
                   <MultiselectFilter
-                    key="diagnoses"
-                    label="Diagnosis"
-                    icon={<img src="/svg/Diagnosis.svg" alt="Diagnosis" width="16" height="16" />}
-                    values={allPossibleDiagnoses.map(diag => ({ id: diag, label: diag }))}
+                    key="author"
+                    label="Author"
+                    icon={<img src="/svg/profile.svg" alt="Author" width="16" height="16" />}
+                    values={allPossibleAuthors.map(author => ({ id: author, label: author }))}
                     selectedValues={activeFilter.data?.values || []}
-                    onValueChange={handleDiagnosesChange}
-                    onClear={handleDiagnosesClear}
-                    onOperatorChange={handleDiagnosesOperatorChange}
-                    openValueMenuInitially={false}
-                    // Fixed filters should never call onDropdownClose - they're always present
-                  />
-                );
-              } else if (filter.key === 'medications') {
-                return (
-                  <MultiselectFilter
-                    key="medications"
-                    label="Medication"
-                    icon={<img src="/svg/Medications.svg" alt="Medication" width="16" height="16" />}
-                    values={allPossibleMedications.map(med => ({ id: med, label: med }))}
-                    selectedValues={activeFilter.data?.values || []}
-                    onValueChange={handleMedicationsChange}
-                    onClear={handleMedicationsClear}
-                    onOperatorChange={handleMedicationsOperatorChange}
+                    onValueChange={handleAuthorChange}
+                    onClear={handleAuthorClear}
                     openValueMenuInitially={false}
                     // Fixed filters should never call onDropdownClose - they're always present
                   />
@@ -1421,46 +1400,13 @@ export function FilterBar() {
           
           {/* Show other active filter pills (NOT pinned filters) AFTER the 3 pinned positions */}
           {getActiveFiltersInOrder().filter(f => {
-            // Exclude pinned filters
-            if (f.type === 'medical' || f.type === 'diagnoses' || f.type === 'medications') return false;
+            // Exclude pinned filters (Title, Date, Author)
+            if (f.type === 'title' || f.type === 'date' || f.type === 'author') return false;
             // Only show as pill if it has values (same logic as fixed filters)
             if (!filterHasValues(f.key)) return false;
             return true;
           }).map(filter => {
             switch (filter.type) {
-              case 'date':
-                return (
-                  <FilterRulePill
-                    key="date"
-                    label="Date"
-                    icon={<img src="/svg/calendar0321.svg" alt="Date" width="16" height="16" />}
-                    operators={[
-                      { id: 'is', label: 'Is' },
-                      { id: 'is-not', label: 'Is not' },
-                      { id: 'is-after', label: 'Is after' },
-                      { id: 'is-before', label: 'Is before' }
-                    ]}
-                    openValueMenuInitially={newlyCreatedPills.has('date')}
-                    values={[
-                      { id: 'today', label: 'Today' },
-                      { id: 'yesterday', label: 'Yesterday' },
-                      { id: 'last-week', label: 'Last week' },
-                      { id: 'last-month', label: 'Last month' },
-                      { id: 'custom', label: 'Custom' }
-                    ]}
-                    value={filter.data?.start || filter.data?.end ? ['custom'] : []}
-                    onValueChange={(value: string[] | string | null) => {
-                      if ((value as string[])?.includes('custom')) {
-                        handleDateChange({ start: '2024-01-01', end: '2024-12-31' });
-                      } else {
-                        handleDateChange({});
-                      }
-                    }}
-                    onClear={() => handleDateChange({})}
-                    onDropdownClose={newlyCreatedPills.has('date') ? () => handleFilterDropdownClose('date') : undefined}
-                  />
-                );
-              
               case 'facility':
                 return (
                   <MultiselectFilter
@@ -1474,59 +1420,6 @@ export function FilterBar() {
                     onOperatorChange={handleFacilityOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('facility')}
                     onDropdownClose={() => handleFilterDropdownClose('facility')}
-                  />
-                );
-              
-              case 'medical':
-                return (
-                  <FilterRulePill
-                    key={`medical-${JSON.stringify(filter.data)}`}
-                    label="Medical Entity"
-                    icon={<img src="/svg/cells.svg" alt="Medical Entity" width="16" height="16" />}
-                    operators={[
-                      { id: 'has', label: 'Has' },
-                      { id: 'has-any-of', label: 'Has any of' }
-                    ]}
-                    values={[
-                      { id: 'medications', label: 'Medications' },
-                      { id: 'diagnoses', label: 'Diagnoses' },
-                      { id: 'labs', label: 'Labs' }
-                    ]}
-                    value={(() => {
-                      const medical = filter.data || { medications: [], diagnoses: [], labs: [] };
-                      const selectedValues = [];
-                      if (medical.medications?.length) selectedValues.push('medications');
-                      if (medical.diagnoses?.length) selectedValues.push('diagnoses');
-                      if (medical.labs?.length) selectedValues.push('labs');
-                      return selectedValues;
-                    })()}
-                    multiple={true}
-                    onValueChange={(value: string[] | string | null) => {
-                      const selectedCategories = value as string[] || [];
-                      const medications = selectedCategories.includes('medications') ? ['Aspirin', 'Metformin'] : [];
-                      const diagnoses = selectedCategories.includes('diagnoses') ? ['Diabetes', 'Hypertension'] : [];
-                      const labs = selectedCategories.includes('labs') ? ['Blood Test', 'Urine Test'] : [];
-                      handleMedicalChange({ medications, diagnoses, labs });
-                    }}
-                    onClear={() => handleMedicalChange({})}
-                    openValueMenuInitially={false}
-                    // Fixed filters should never call onDropdownClose - they're always present
-                  />
-                );
-              
-              case 'author':
-                return (
-                  <MultiselectFilter
-                    key="author"
-                    label="Author"
-                    icon={<img src="/svg/profile.svg" alt="Author" width="16" height="16" />}
-                    values={allPossibleAuthors.map(author => ({ id: author, label: author }))}
-                    selectedValues={filter.data?.values || []}
-                    onValueChange={handleAuthorChange}
-                    onClear={handleAuthorClear}
-                    onOperatorChange={handleAuthorOperatorChange}
-                    openValueMenuInitially={newlyCreatedPills.has('author')}
-                    onDropdownClose={() => handleFilterDropdownClose('author')}
                   />
                 );
               
@@ -1546,54 +1439,6 @@ export function FilterBar() {
                   />
                 );
               
-              case 'medications':
-                return (
-                  <MultiselectFilter
-                    key="medications"
-                    label="Medication"
-                    icon={<img src="/svg/Medications.svg" alt="Medication" width="16" height="16" />}
-                    values={medicationValues}
-                    selectedValues={filter.data?.values || []}
-                    onValueChange={handleMedicationsChange}
-                    onClear={handleMedicationsClear}
-                    onOperatorChange={handleMedicationsOperatorChange}
-                    openValueMenuInitially={false}
-                    // Fixed filters should never call onDropdownClose - they're always present
-                  />
-                );
-              
-              case 'diagnoses':
-                return (
-                  <MultiselectFilter
-                    key="diagnoses"
-                    label="Diagnosis"
-                    icon={<img src="/svg/Diagnosis.svg" alt="Diagnosis" width="16" height="16" />}
-                    values={diagnosisValues}
-                    selectedValues={filter.data?.values || []}
-                    onValueChange={handleDiagnosesChange}
-                    onClear={handleDiagnosesClear}
-                    onOperatorChange={handleDiagnosesOperatorChange}
-                    openValueMenuInitially={false}
-                    // Fixed filters should never call onDropdownClose - they're always present
-                  />
-                );
-              
-              case 'labs':
-                return (
-                  <MultiselectFilter
-                    key="labs"
-                    label="Labs"
-                    icon={<img src="/svg/Labs.svg" alt="Labs" width="16" height="16" />}
-                    values={labValues}
-                    selectedValues={filter.data?.values || []}
-                    onValueChange={handleLabsChange}
-                    onClear={handleLabsClear}
-                    onOperatorChange={handleLabsOperatorChange}
-                    openValueMenuInitially={newlyCreatedPills.has('labs')}
-                    onDropdownClose={() => handleFilterDropdownClose('labs')}
-                  />
-                );
-              
               default:
                 return null;
             }
@@ -1603,7 +1448,7 @@ export function FilterBar() {
           {Array.from(new Set([
             // Newly created filters without values
             ...Array.from(newlyCreatedPills)
-              .filter(key => !['medical', 'diagnoses', 'medications'].includes(key))
+              .filter(key => !['title', 'date', 'author'].includes(key))
               .filter(key => !filterHasValues(key))
           ])).map(filterKey => {
             const metadata = filterMetadata[filterKey];
