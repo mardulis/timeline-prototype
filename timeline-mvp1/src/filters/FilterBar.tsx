@@ -664,6 +664,17 @@ export function FilterBar() {
     return Array.from(authors).sort();
   }, [results]);
   
+  // Get all possible titles (for dropdown options) - extract from actual data
+  const allPossibleTitles = React.useMemo(() => {
+    const titles = new Set<string>();
+    allDocs.forEach(doc => {
+      if (doc.title) {
+        titles.add(doc.title);
+      }
+    });
+    return Array.from(titles).sort();
+  }, [allDocs]);
+
   // Get all possible authors (for dropdown options) - extract from actual data
   const allPossibleAuthors = React.useMemo(() => {
     const authors = new Set<string>();
@@ -870,6 +881,37 @@ export function FilterBar() {
     delete (newFilters as any).docType;
     const updatedFilters = removeFromCreationOrder('docType', newFilters);
     setFilters(updatedFilters);
+  };
+  
+  const handleTitleChange = (titleValue: string[]) => {
+    const operator = titleValue.length === 1 ? 'is' : 'is-any-of';
+    
+    // Use functional update to avoid overwriting other concurrent filter changes
+    setFilters(prevFilters => {
+      const newFilters = { 
+        ...prevFilters, 
+        title: { values: titleValue, operator } 
+      };
+      // Always keep the filter (even if empty), unless explicitly cleared
+      return addToCreationOrder('title', newFilters);
+    });
+    
+    // Don't remove from newlyCreatedPills here - let handleFilterDropdownClose do it
+    // This keeps the dropdown open for multiple selections, matching fixed filter behavior
+  };
+  
+  const handleTitleClear = () => {
+    // Explicitly remove the filter when X is clicked
+    const newFilters = { ...filters };
+    delete (newFilters as any).title;
+    const updatedFilters = removeFromCreationOrder('title', newFilters);
+    setFilters(updatedFilters);
+  };
+  
+  const handleTitleOperatorChange = (operator: string) => {
+    if (filters.title) {
+      setFilters({ ...filters, title: { ...filters.title, operator } });
+    }
   };
   
   const handleAuthorChange = (authorValue: string[]) => {

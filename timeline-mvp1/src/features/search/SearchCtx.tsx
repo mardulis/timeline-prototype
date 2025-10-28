@@ -2,6 +2,10 @@ import React, { createContext, useContext, useState, useMemo } from 'react';
 import { Doc, ViewMode } from '../../types/Timeline';
 
 export interface SearchFilters {
+  title?: {
+    values?: string[];
+    operator?: string;
+  };
   date?: {
     start?: string;
     end?: string;
@@ -132,6 +136,18 @@ function applyFilters(docs: Doc[], query: string, filters: SearchFilters, viewMo
         
         default:
           return doc.title.toLowerCase().includes(searchTerm);
+      }
+    });
+  }
+  
+  // Apply title filter
+  if (filters.title?.values && filters.title.values.length > 0) {
+    const operator = filters.title.operator || 'is-any-of';
+    filtered = filtered.filter(doc => {
+      if (operator === 'is') {
+        return filters.title!.values!.includes(doc.title);
+      } else {
+        return filters.title!.values!.includes(doc.title);
       }
     });
   }
