@@ -1,0 +1,18 @@
+{
+  "headers": [
+    {
+      "source": "/:file*.pdf",
+      "headers": [
+        { "key": "Content-Type", "value": "application/pdf" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
+}

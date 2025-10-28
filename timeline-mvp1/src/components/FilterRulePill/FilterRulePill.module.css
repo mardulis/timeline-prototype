@@ -1,0 +1,341 @@
+:root{
+  --bg: #f9fafb; /* Light gray background for active filters */
+  --text: #2582ff; /* Blue text for active filters */
+  --muted: #98A2B3;
+  --stroke: #e5e7eb; /* Border color matching Figma */
+  --hover: #f3f4f6;
+  --active: #e5e7eb;
+  --accent: #2582ff; /* Brand blue */
+}
+
+/* === Pill container === */
+.pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb; /* Figma border color */
+  background: #f9fafb; /* Figma light gray background for active filters */
+  padding-inline: 0; /* Remove outer padding to let sections control their own spacing */
+  overflow: hidden;
+  width: fit-content; /* Hug width - size to content */
+  box-shadow: 0px 1px 4px 0px rgba(12, 12, 13, 0.05); /* Figma shadow */
+}
+
+/* vertical dividers - right border on all sections except last */
+.pill > * {
+  border-right: 0.5px solid #e5e7eb; /* Thin border matching Figma */
+}
+.pill > *:last-child {
+  border-right: none; /* Remove border from last section */
+}
+
+.seg {
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 10px;
+  white-space: nowrap; /* Prevent text wrapping */
+  width: fit-content; /* Hug width - size to content */
+}
+
+/* label segment */
+.label {
+  padding-inline: 10px;
+  gap: 8px;
+}
+.icon {
+  width: 16px;
+  height: 16px;
+  color: #2582ff; /* Primary blue color for icon when filter has value */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg,
+.icon svg * {
+  width: 16px;
+  height: 16px;
+  fill: #2582ff !important; /* Force blue color for all SVG paths when filter has value */
+  stroke: #2582ff !important; /* Also set stroke in case SVG uses stroke */
+  color: #2582ff; /* Set color as well */
+}
+
+/* Handle img tags - convert to blue using CSS filter when filter has value */
+.icon img {
+  filter: brightness(0) saturate(100%) invert(42%) sepia(95%) saturate(2726%) hue-rotate(207deg) brightness(102%) contrast(101%);
+}
+
+.iconEmpty {
+  color: #0f172a; /* Dark slate color when filter has no value - matches Figma */
+}
+
+.iconEmpty svg,
+.iconEmpty svg * {
+  fill: #0f172a !important; /* Force dark slate color for all SVG paths when filter has no value */
+  stroke: #0f172a !important; /* Also set stroke in case SVG uses stroke */
+  color: #0f172a; /* Set color as well */
+}
+
+/* Handle img tags - convert to dark slate using CSS filter when filter has no value (#0f172a) */
+.iconEmpty img {
+  filter: brightness(0) saturate(100%) invert(7%) sepia(14%) saturate(3297%) hue-rotate(183deg) brightness(95%) contrast(93%);
+}
+.labelText {
+  font-family: 'Switzer', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #2582ff; /* Figma blue text */
+  white-space: nowrap;
+  flex-shrink: 0; /* Prevent text from shrinking */
+}
+
+/* interactive segments reset (prevents "chip" look) */
+.buttonReset {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+  font: inherit; color: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+.segmentBtn {
+  composes: seg;
+  composes: buttonReset;
+  border-radius: 0; /* flat */
+  border-right: 0.5px solid #e5e7eb; /* Ensure right border is applied */
+}
+.segmentBtn:hover { background: #f3f4f6; }
+.segmentBtn[data-open="true"] { background: #e5e7eb; }
+
+.operatorText {
+  font-family: 'Switzer', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #2582ff; /* Figma blue text */
+  white-space: nowrap;
+  flex-shrink: 0; /* Prevent text from shrinking */
+}
+
+.valueText {
+  font-family: 'Switzer', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #2582ff; /* Figma blue text */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; /* Limit width before ellipsis */
+  flex-shrink: 1; /* Allow text to shrink and show ellipsis */
+  position: relative;
+}
+.valueText.isEmpty { 
+  color: #6b7280; /* Figma gray color for placeholder text */
+  font-weight: 400; /* Regular weight for placeholder */
+}
+
+/* Tooltip for truncated values */
+.valueTooltip {
+  position: fixed;
+  z-index: 99999;
+  background: #0f172a; /* Figma dark background */
+  color: #f1f5f9; /* Figma light text */
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-family: 'Switzer', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+  word-wrap: break-word;
+  max-width: 300px;
+  box-shadow: 0px 1px 4px 0px rgba(3, 7, 18, 0.1), 0px 1px 4px 0px rgba(12, 12, 13, 0.05);
+  pointer-events: none;
+  transform: translateY(-100%);
+  margin-top: -8px;
+}
+
+/* clear icon button */
+.clearBtn {
+  composes: buttonReset;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px; /* 10px left and right padding around icon */
+  width: fit-content; /* Hug width to accommodate padding */
+  border: none; /* No border for standard button appearance */
+  color: #2582ff; /* Figma blue color for X icon */
+}
+.clearBtn:hover { background: #f3f4f6; }
+.clearBtn:active { background: #e5e7eb; }
+
+/* focus ring on the segment only */
+.segmentBtn:focus-visible, .clearBtn:focus-visible {
+  outline: 2px solid color-mix(in srgb, #3B82F6 35%, transparent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* === Dropdown Panel === */
+.panel {
+  position: fixed;
+  z-index: 50010; /* Higher than TopSection (50004) and DocumentPreviewPanel (50005) */
+  background: #ffffff;
+  border-radius: 18px; /* More rounded corners like the example */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 0.5px solid #e5e7eb; /* Subtle border like the example */
+  padding: 8px;
+  min-width: var(--anchor-w, 12rem);
+  max-width: min(90vw, 300px); /* Updated to max 300px */
+  max-height: 60vh;
+  overflow: auto;
+  
+  /* No transitions - appear instantly in final position */
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+/* operator items (radio-like) */
+.menuItem {
+  width: 100%;
+  padding: 8px 12px; /* Consistent padding like the example */
+  border-radius: 10px; /* Rounded corners on hover */
+  text-align: left;
+  background: transparent;
+  border: 0;
+  font: 400 13px/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; /* Regular weight like example */
+  color: #374151; /* Dark gray text like the example */
+  cursor: pointer;
+}
+.menuItem:hover { 
+  background: #f3f4f6; /* Light gray hover like the example */
+}
+.menuItem:focus-visible {
+  outline: 2px solid color-mix(in srgb, #3B82F6 35%, transparent);
+  outline-offset: 2px;
+}
+
+/* value items (checkbox-like) */
+.valueRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px; /* Consistent padding like the example */
+  border-radius: 10px; /* Rounded corners on hover */
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.valueRow:hover { 
+  background: #f3f4f6; /* Light gray hover like the example */
+}
+.valueRow:focus-visible {
+  outline: 2px solid color-mix(in srgb, #3B82F6 35%, transparent);
+  outline-offset: 2px;
+}
+
+.checkbox {
+  width: 16px; height: 16px; /* 16x16 size as requested */
+  border-radius: 4px; /* Slightly rounded corners */
+  display: grid; place-items: center;
+  border: 1px solid #e5e7eb; /* Light gray border like the example */
+  background: #ffffff; /* White background */
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.checked {
+  background: #2582FF; /* Blue background like the example */
+  color: #ffffff; /* White checkmark */
+  border-color: #2582FF; /* Blue border when checked */
+  box-shadow: 0 1px 2px rgba(37, 130, 255, 0.2); /* Subtle shadow */
+}
+.valueLabel {
+  font: 400 13px/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; /* Regular weight like example */
+  color: #374151; /* Dark gray text like the example */
+}
+
+/* Search functionality */
+.searchContainer {
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  /* Removed: border-bottom: 1px solid #e5e7eb; */
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #374151;
+  background: #ffffff;
+  
+  &:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  }
+  
+  &::placeholder {
+    color: #9CA3AF;
+  }
+}
+
+.valuesContainer {
+  max-height: 50vh;
+  overflow-y: auto;
+  /* Remove scrollbar borders */
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+  /* Prevent parent scroll/focus tug */
+  overscroll-behavior: contain;
+  /* No smooth scroll surprises */
+  scroll-behavior: auto;
+}
+
+.valuesContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.valuesContainer::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+
+.valuesContainer::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+  border: none;
+}
+
+.valuesContainer::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+.noResults {
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #9CA3AF;
+  font-style: italic;
+}
+
+/* utility to let operator/value expand & truncate */
+.flex1 { width: fit-content; }

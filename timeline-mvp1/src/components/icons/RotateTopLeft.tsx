@@ -1,0 +1,38 @@
+import React from 'react';
+
+interface RotateTopLeftProps {
+  width?: number;
+  height?: number;
+  color?: string;
+}
+
+export const RotateTopLeft: React.FC<RotateTopLeftProps> = ({ 
+  width = 16, 
+  height = 16, 
+  color = "#1F2937" 
+}) => (
+  <svg 
+    width={width} 
+    height={height} 
+    viewBox="0 0 16 16" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path 
+      d="M2 9.99992C2 12.1998 2 13.2997 2.68342 13.9832C3.36683 14.6666 4.46678 14.6666 6.66667 14.6666C8.86653 14.6666 9.96647 14.6666 10.6499 13.9832C11.3333 13.2997 11.3333 12.1998 11.3333 9.99992C11.3333 7.80005 11.3333 6.70012 10.6499 6.01667C9.96647 5.33325 8.86653 5.33325 6.66667 5.33325C4.46678 5.33325 3.36683 5.33325 2.68342 6.01667C2 6.70012 2 7.80005 2 9.99992Z" 
+      stroke={color} 
+      strokeWidth="1.25" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M9.6134 1.33325L8.71627 2.07334C8.23873 2.46728 8 2.66424 8 2.90901H8.66667C11.1808 2.90901 12.4379 2.90901 13.2189 3.69006C14 4.4711 14 5.72819 14 8.24232V8.66658" 
+      stroke={color} 
+      strokeWidth="1.25" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export default RotateTopLeft;
