@@ -785,37 +785,25 @@ export function FilterBar() {
 
     creationOrder.forEach(filterKey => {
       switch (filterKey) {
+        case 'title':
+          // Always show title filter if it's in creation order, even if empty
+          activeFilters.push({ key: 'title', type: 'title', data: filters.title || { values: [] } });
+          break;
         case 'date':
           // Always show date filter if it's in creation order, even if empty
           activeFilters.push({ key: 'date', type: 'date', data: filters.date || {} });
-          break;
-        case 'facility':
-          // Always show facility filter if it's in creation order, even if empty
-          activeFilters.push({ key: 'facility', type: 'facility', data: filters.facility || { values: [] } });
-          break;
-        case 'medical':
-          // Always show medical filter if it's in creation order, even if empty
-          activeFilters.push({ key: 'medical', type: 'medical', data: filters.medical || { medications: [], diagnoses: [], labs: [] } });
           break;
         case 'author':
           // Always show author filter if it's in creation order, even if empty
           activeFilters.push({ key: 'author', type: 'author', data: filters.author || { values: [] } });
           break;
+        case 'facility':
+          // Always show facility filter if it's in creation order, even if empty
+          activeFilters.push({ key: 'facility', type: 'facility', data: filters.facility || { values: [] } });
+          break;
         case 'docType':
           // Always show docType filter if it's in creation order, even if empty
           activeFilters.push({ key: 'docType', type: 'docType', data: filters.docType || { values: [] } });
-          break;
-        case 'medications':
-          // Always show medications filter if it's in creation order, even if empty
-          activeFilters.push({ key: 'medications', type: 'medications', data: filters.medications || { values: [] } });
-          break;
-        case 'diagnoses':
-          // Always show diagnoses filter if it's in creation order, even if empty
-          activeFilters.push({ key: 'diagnoses', type: 'diagnoses', data: filters.diagnoses || { values: [] } });
-          break;
-        case 'labs':
-          // Always show labs filter if it's in creation order, even if empty
-          activeFilters.push({ key: 'labs', type: 'labs', data: filters.labs || { values: [] } });
           break;
       }
     });
