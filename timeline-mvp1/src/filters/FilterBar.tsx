@@ -1125,9 +1125,43 @@ export function FilterBar() {
         { id: 'after', label: 'After' },
         { id: 'between', label: 'Between' }
       ],
-      values: [],
+      values: [
+        { id: 'specific', label: 'Specific Date' },
+        { id: 'range', label: 'Date Range' },
+        { id: 'before-dol', label: 'Before DOL' },
+        { id: 'after-dol', label: 'After DOL' }
+      ],
       value: null,
-      onValueChange: () => {},
+      onValueChange: (value: string | null) => {
+        // Date filter - single select (choose date mode)
+        if (value === 'specific') {
+          // Will open date picker for single date selection
+          setFilters(prevFilters => addToCreationOrder('date', { 
+            ...prevFilters, 
+            date: { operator: 'is', mode: 'specific' }
+          }));
+        } else if (value === 'range') {
+          // Will open date picker for range selection
+          setFilters(prevFilters => addToCreationOrder('date', { 
+            ...prevFilters, 
+            date: { operator: 'between', mode: 'range' }
+          }));
+        } else if (value === 'before-dol') {
+          // Set to DOL date automatically
+          const dolDate = new Date(2020, 2, 27); // Will get from getDOLDate()
+          setFilters(prevFilters => addToCreationOrder('date', { 
+            ...prevFilters, 
+            date: { operator: 'before', end: dolDate.toISOString().split('T')[0], mode: 'before-dol' }
+          }));
+        } else if (value === 'after-dol') {
+          // Set to DOL date automatically
+          const dolDate = new Date(2020, 2, 27); // Will get from getDOLDate()
+          setFilters(prevFilters => addToCreationOrder('date', { 
+            ...prevFilters, 
+            date: { operator: 'after', start: dolDate.toISOString().split('T')[0], mode: 'after-dol' }
+          }));
+        }
+      },
       onClear: () => setFilters({ ...filters, date: undefined })
     },
     { 
@@ -1325,6 +1359,24 @@ export function FilterBar() {
                   />
                 );
               } else if (filter.key === 'date') {
+                const dateData = activeFilter.data || {};
+                const operator = dateData.operator || 'is';
+                const mode = dateData.mode || '';
+                
+                // Format the date value for display
+                let dateValue = '';
+                if (mode === 'specific' && dateData.start) {
+                  dateValue = new Date(dateData.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                } else if (mode === 'range' && dateData.start && dateData.end) {
+                  const startStr = new Date(dateData.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const endStr = new Date(dateData.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  dateValue = `${startStr} - ${endStr}`;
+                } else if (mode === 'before-dol' && dateData.end) {
+                  dateValue = new Date(dateData.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                } else if (mode === 'after-dol' && dateData.start) {
+                  dateValue = new Date(dateData.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+                
                 return (
                   <FilterRulePill
                     key="date"
@@ -1336,10 +1388,16 @@ export function FilterBar() {
                       { id: 'after', label: 'After' },
                       { id: 'between', label: 'Between' }
                     ]}
-                    values={[]}
-                    value={null}
+                    operator={operator}
+                    values={dateValue ? [{ id: 'date-value', label: dateValue }] : []}
+                    value={dateValue ? ['date-value'] : []}
                     onValueChange={() => {}}
-                    onClear={() => setFilters({ ...filters, date: undefined })}
+                    onClear={() => {
+                      const newFilters = { ...filters };
+                      delete (newFilters as any).date;
+                      const updatedFilters = removeFromCreationOrder('date', newFilters);
+                      setFilters(updatedFilters);
+                    }}
                     openValueMenuInitially={false}
                     // Fixed filters should never call onDropdownClose - they're always present
                   />
@@ -1369,13 +1427,6 @@ export function FilterBar() {
                   quickFilterRefs.current[filter.key] = el;
                 }}
                 onClick={() => {
-                  // Date filter: Don't open dropdown (needs date picker instead)
-                  if (filter.key === 'date') {
-                    // TODO: Implement date picker for date range selection
-                    console.log('Date filter clicked - date picker not yet implemented');
-                    return;
-                  }
-                  
                   // Toggle dropdown menu for this filter
                   if (activeQuickFilter === filter.key) {
                     setActiveQuickFilter(null);
@@ -1615,6 +1666,9 @@ export function FilterBar() {
                     let isSelected = false;
                     if (filter.key === 'title') {
                       isSelected = (filters.title?.values || []).includes(value.id);
+                    } else if (filter.key === 'date') {
+                      const mode = (filters.date as any)?.mode;
+                      isSelected = mode === value.id;
                     } else if (filter.key === 'author') {
                       isSelected = (filters.author?.values || []).includes(value.id);
                     } else if (filter.key === 'facility') {
