@@ -56,7 +56,9 @@ const convertDocToPreviewData = (doc: Doc): DocumentPreviewData => {
     summary: doc.summary,
     medications: doc.medications || [],
     diagnoses: doc.diagnoses || [],
-    labs: doc.labs || []
+    labs: doc.labs || [],
+    bodyParts: doc.bodyParts || [],
+    substances: doc.substances || []
   };
 };
 
