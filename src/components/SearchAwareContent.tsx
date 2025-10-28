@@ -102,7 +102,15 @@ export function SearchAwareContent({
   // Deselect and close preview if selected document is filtered out
   React.useEffect(() => {
     if (selectedDocId) {
-      const isStillInResults = results.some(doc => doc.id === selectedDocId);
+      // Check if the selected item (document or child entity) is still in results
+      // For child entities (e.g., "doc123-medication-0"), check if parent document exists
+      const isStillInResults = results.some(doc => {
+        // Direct document ID match
+        if (doc.id === selectedDocId) return true;
+        // Child entity ID match (format: "docId-entityType-index")
+        if (selectedDocId.startsWith(doc.id + '-')) return true;
+        return false;
+      });
       if (!isStillInResults) {
         onClosePreview();
       }

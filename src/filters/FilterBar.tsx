@@ -376,9 +376,28 @@ const QuickFilterMenuItem = styled.button<{ isSelected?: boolean }>`
 
 
 export function FilterBar() {
-  const { filters, setFilters, results, allDocs, clearFilters, query, setQuery } = useSearch();
+  const { filters, setFilters, results, allDocs, query, setQuery } = useSearch();
   const [newlyCreatedPills, setNewlyCreatedPills] = useState<Set<string>>(new Set());
   const { setOpenDropdown } = useDropdown();
+  
+  // Custom clear filters handler
+  const handleClearAllFilters = () => {
+    // Clear query
+    setQuery('');
+    
+    // Reset fixed filters to empty (they stay as dashed buttons)
+    // Remove More filters completely
+    setFilters({
+      medical: { medications: [], diagnoses: [], labs: [] },
+      medications: { values: [], operator: 'is' },
+      diagnoses: { values: [], operator: 'is' },
+      // Don't include More filters - they get removed completely
+      creationOrder: [] // Reset creation order
+    });
+    
+    // Clear newly created pills tracking
+    setNewlyCreatedPills(new Set());
+  };
   
   // State for quick filter menus
   const [activeQuickFilter, setActiveQuickFilter] = React.useState<string | null>(null);
@@ -503,31 +522,57 @@ export function FilterBar() {
     }
   };
   
-  // Handler for when a filter dropdown closes - remove empty filters
+  // Handler for when a filter dropdown closes - only for newly created filters
   const handleFilterDropdownClose = (filterKey: string) => {
-    // Only check newly created pills (temporary filters)
+    // This is called when a filter dropdown closes
+    // Only act on filters that are being created (in newlyCreatedPills)
+    
     if (newlyCreatedPills.has(filterKey)) {
-      // If filter has no values, remove it
-      if (!filterHasValues(filterKey)) {
-        const updatedFilters = removeFromCreationOrder(filterKey, { ...filters });
-        delete (updatedFilters as any)[filterKey];
-        setFilters(updatedFilters);
+      // Use functional update to check LATEST filter values (not stale closure values)
+      setFilters(prevFilters => {
+        // Check if filter has values using the LATEST state
+        let hasValues = false;
+        switch (filterKey) {
+          case 'author':
+            hasValues = (prevFilters.author?.values?.length ?? 0) > 0;
+            break;
+          case 'facility':
+            hasValues = (prevFilters.facility?.values?.length ?? 0) > 0;
+            break;
+          case 'docType':
+            hasValues = (prevFilters.docType?.values?.length ?? 0) > 0;
+            break;
+          case 'medications':
+            hasValues = (prevFilters.medications?.values?.length ?? 0) > 0;
+            break;
+          case 'diagnoses':
+            hasValues = (prevFilters.diagnoses?.values?.length ?? 0) > 0;
+            break;
+          case 'labs':
+            hasValues = (prevFilters.labs?.values?.length ?? 0) > 0;
+            break;
+        }
         
-        // Remove from newly created pills tracking
-        setNewlyCreatedPills(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(filterKey);
-          return newSet;
-        });
-      } else {
-        // Filter has values, it's now permanent - remove from tracking
-        setNewlyCreatedPills(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(filterKey);
-          return newSet;
-        });
-      }
+        // If filter has no values, remove it entirely
+        if (!hasValues) {
+          const updatedFilters = removeFromCreationOrder(filterKey, { ...prevFilters });
+          delete (updatedFilters as any)[filterKey];
+          return updatedFilters;
+        }
+        
+        // If filter has values, keep it as-is
+        return prevFilters;
+      });
+      
+      // Remove from newly created pills tracking when dropdown closes
+      // After this, the filter is "permanent" and can only be removed by X or Clear filters
+      setNewlyCreatedPills(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(filterKey);
+        return newSet;
+      });
     }
+    // Note: For established pills (not in newlyCreatedPills), this function does nothing
   };
   
   // Keep menu open even if quick filter button disappears (when pill is created)
@@ -543,6 +588,8 @@ export function FilterBar() {
         const isInsideQuickFilterButton = quickFilterRefs.current[activeQuickFilter]?.contains(clickedElement);
         
         if (!isInsideMenu && !isInsideQuickFilterButton) {
+          // Check if we should remove the filter (if it's newly created and has no value)
+          handleFilterDropdownClose(activeQuickFilter);
           setActiveQuickFilter(null);
         }
       }
@@ -617,27 +664,16 @@ export function FilterBar() {
     return Array.from(authors).sort();
   }, [results]);
   
-  // Get all possible authors (for dropdown options) - static list from actual data
+  // Get all possible authors (for dropdown options) - extract from actual data
   const allPossibleAuthors = React.useMemo(() => {
-    return [
-      'Sir William Osler',
-      'Edward Jenner',
-      'Florence Nightingale',
-      'Joseph Lister',
-      'Alexander Fleming',
-      'Norman Bethune',
-      'Frederick Banting',
-      'Charles Best',
-      'Elizabeth Blackwell',
-      'Harold Gillies',
-      'James Barry',
-      'Howard Florey',
-      'Thomas Wakley',
-      'John Snow',
-      'Henry Gray',
-      'Emily Stowe'
-    ].sort();
-  }, []);
+    const authors = new Set<string>();
+    allDocs.forEach(doc => {
+      if (doc.author) {
+        authors.add(doc.author);
+      }
+    });
+    return Array.from(authors).sort();
+  }, [allDocs]);
   
   // Get available facilities from results (for filtering) - kept for potential future use
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -649,27 +685,16 @@ export function FilterBar() {
     return Array.from(facilities).sort();
   }, [results]);
   
-  // Get all possible facilities (for dropdown options) - static list from actual data
+  // Get all possible facilities (for dropdown options) - extract from actual data
   const allPossibleFacilities = React.useMemo(() => {
-    return [
-      '221B Consulting Clinic',
-      'Barchester Infirmary',
-      'Thornfield Hall Clinic',
-      'Pemberley Manor Surgery',
-      'Wuthering Heights Dispensary',
-      'St. Mungo\'s Ward',
-      'Baker Street Practice',
-      'Bleak House Sanatorium',
-      'Moor House Medical Rooms',
-      'Howard\'s End Health Centre',
-      'Middlemarch Hospital',
-      'Dorian Gray Wellness Centre',
-      'Crickhollow Clinic',
-      'Gormenghast Infirmary',
-      'Netherfield Park Surgery',
-      'Hogsmeade Urgent Care'
-    ].sort();
-  }, []);
+    const facilities = new Set<string>();
+    allDocs.forEach(doc => {
+      if (doc.facility) {
+        facilities.add(doc.facility);
+      }
+    });
+    return Array.from(facilities).sort();
+  }, [allDocs]);
   
   // Get all possible medications (from ALL documents, not filtered results)
   const allPossibleMedications = React.useMemo(() => {
@@ -824,53 +849,77 @@ export function FilterBar() {
   
   const handleDocTypeChange = (docTypeValue: string[]) => {
     const operator = docTypeValue.length === 1 ? 'is' : 'is-any-of';
-    const newFilters = { 
-      ...filters, 
-      docType: { values: docTypeValue, operator } 
-    };
-    if (docTypeValue.length > 0) {
-      // Adding or updating docType filter
-      const updatedFilters = addToCreationOrder('docType', newFilters);
-      setFilters(updatedFilters);
-    } else {
-      // Removing docType filter
-      const updatedFilters = removeFromCreationOrder('docType', newFilters);
-      setFilters(updatedFilters);
-    }
+    
+    // Use functional update to avoid overwriting other concurrent filter changes
+    setFilters(prevFilters => {
+      const newFilters = { 
+        ...prevFilters, 
+        docType: { values: docTypeValue, operator } 
+      };
+      // Always keep the filter (even if empty), unless explicitly cleared
+      return addToCreationOrder('docType', newFilters);
+    });
+    
+    // Don't remove from newlyCreatedPills here - let handleFilterDropdownClose do it
+    // This keeps the dropdown open for multiple selections, matching fixed filter behavior
+  };
+  
+  const handleDocTypeClear = () => {
+    // Explicitly remove the filter when X is clicked
+    const newFilters = { ...filters };
+    delete (newFilters as any).docType;
+    const updatedFilters = removeFromCreationOrder('docType', newFilters);
+    setFilters(updatedFilters);
   };
   
   const handleAuthorChange = (authorValue: string[]) => {
     const operator = authorValue.length === 1 ? 'is' : 'is-any-of';
-    const newFilters = { 
-      ...filters, 
-      author: { values: authorValue, operator } 
-    };
-    if (authorValue.length > 0) {
-      // Adding or updating author filter
-      const updatedFilters = addToCreationOrder('author', newFilters);
-      setFilters(updatedFilters);
-    } else {
-      // Removing author filter
-      const updatedFilters = removeFromCreationOrder('author', newFilters);
-      setFilters(updatedFilters);
-    }
+    
+    // Use functional update to avoid overwriting other concurrent filter changes
+    setFilters(prevFilters => {
+      const newFilters = { 
+        ...prevFilters, 
+        author: { values: authorValue, operator } 
+      };
+      // Always keep the filter (even if empty), unless explicitly cleared
+      return addToCreationOrder('author', newFilters);
+    });
+    
+    // Don't remove from newlyCreatedPills here - let handleFilterDropdownClose do it
+    // This keeps the dropdown open for multiple selections, matching fixed filter behavior
+  };
+  
+  const handleAuthorClear = () => {
+    // Explicitly remove the filter when X is clicked
+    const newFilters = { ...filters };
+    delete (newFilters as any).author;
+    const updatedFilters = removeFromCreationOrder('author', newFilters);
+    setFilters(updatedFilters);
   };
   
   const handleFacilityChange = (facilityValue: string[]) => {
     const operator = facilityValue.length === 1 ? 'is' : 'is-any-of';
-    const newFilters = { 
-      ...filters, 
-      facility: { values: facilityValue, operator } 
-    };
-    if (facilityValue.length > 0) {
-      // Adding or updating facility filter
-      const updatedFilters = addToCreationOrder('facility', newFilters);
-      setFilters(updatedFilters);
-    } else {
-      // Removing facility filter
-      const updatedFilters = removeFromCreationOrder('facility', newFilters);
-      setFilters(updatedFilters);
-    }
+    
+    // Use functional update to avoid overwriting other concurrent filter changes
+    setFilters(prevFilters => {
+      const newFilters = { 
+        ...prevFilters, 
+        facility: { values: facilityValue, operator } 
+      };
+      // Always keep the filter (even if empty), unless explicitly cleared
+      return addToCreationOrder('facility', newFilters);
+    });
+    
+    // Don't remove from newlyCreatedPills here - let handleFilterDropdownClose do it
+    // This keeps the dropdown open for multiple selections, matching fixed filter behavior
+  };
+  
+  const handleFacilityClear = () => {
+    // Explicitly remove the filter when X is clicked
+    const newFilters = { ...filters };
+    delete (newFilters as any).facility;
+    const updatedFilters = removeFromCreationOrder('facility', newFilters);
+    setFilters(updatedFilters);
   };
 
   // Operator change handlers
@@ -902,60 +951,76 @@ export function FilterBar() {
   const handleMedicationsChange = (medicationValues: string[]) => {
     const operator = medicationValues.length === 1 ? 'is' : 'is-any-of';
     
-    if (medicationValues.length > 0) {
-      setFilters(prevFilters => {
-        const newFilters = { 
-          ...prevFilters, 
-          medications: { values: medicationValues, operator } 
-        };
-        return addToCreationOrder('medications', newFilters);
-      });
-    } else {
-      setFilters(prevFilters => {
-        const newFilters = { 
-          ...prevFilters, 
-          medications: { values: medicationValues, operator } 
-        };
-        return removeFromCreationOrder('medications', newFilters);
-      });
-    }
+    // Always keep the filter (even if empty), unless explicitly cleared
+    setFilters(prevFilters => {
+      const newFilters = { 
+        ...prevFilters, 
+        medications: { values: medicationValues, operator } 
+      };
+      return addToCreationOrder('medications', newFilters);
+    });
+    
+    // Fixed filters don't need to disengage QuickFilterMenu or manage newlyCreatedPills
+    // They're always present and never go through the "newly created" flow
+  };
+  
+  const handleMedicationsClear = () => {
+    // Explicitly remove the filter when X is clicked
+    setFilters(prevFilters => {
+      const newFilters = { ...prevFilters };
+      delete (newFilters as any).medications;
+      return removeFromCreationOrder('medications', newFilters);
+    });
   };
   
   const handleDiagnosesChange = (diagnosisValues: string[]) => {
     const operator = diagnosisValues.length === 1 ? 'is' : 'is-any-of';
     
-    if (diagnosisValues.length > 0) {
-      setFilters(prevFilters => {
-        const newFilters = { 
-          ...prevFilters, 
-          diagnoses: { values: diagnosisValues, operator } 
-        };
-        return addToCreationOrder('diagnoses', newFilters);
-      });
-    } else {
-      setFilters(prevFilters => {
-        const newFilters = { 
-          ...prevFilters, 
-          diagnoses: { values: diagnosisValues, operator } 
-        };
-        return removeFromCreationOrder('diagnoses', newFilters);
-      });
-    }
+    // Always keep the filter (even if empty), unless explicitly cleared
+    setFilters(prevFilters => {
+      const newFilters = { 
+        ...prevFilters, 
+        diagnoses: { values: diagnosisValues, operator } 
+      };
+      return addToCreationOrder('diagnoses', newFilters);
+    });
+    
+    // Fixed filters don't need to disengage QuickFilterMenu or manage newlyCreatedPills
+    // They're always present and never go through the "newly created" flow
+  };
+  
+  const handleDiagnosesClear = () => {
+    // Explicitly remove the filter when X is clicked
+    setFilters(prevFilters => {
+      const newFilters = { ...prevFilters };
+      delete (newFilters as any).diagnoses;
+      return removeFromCreationOrder('diagnoses', newFilters);
+    });
   };
   
   const handleLabsChange = (labValues: string[]) => {
     const operator = labValues.length === 1 ? 'is' : 'is-any-of';
-    const newFilters = { 
-      ...filters, 
-      labs: { values: labValues, operator } 
-    };
-    if (labValues.length > 0) {
-      const updatedFilters = addToCreationOrder('labs', newFilters);
-      setFilters(updatedFilters);
-    } else {
-      const updatedFilters = removeFromCreationOrder('labs', newFilters);
-      setFilters(updatedFilters);
-    }
+    
+    // Use functional update to avoid overwriting other concurrent filter changes
+    setFilters(prevFilters => {
+      const newFilters = { 
+        ...prevFilters, 
+        labs: { values: labValues, operator } 
+      };
+      // Always keep the filter (even if empty), unless explicitly cleared
+      return addToCreationOrder('labs', newFilters);
+    });
+    
+    // Don't remove from newlyCreatedPills here - let handleFilterDropdownClose do it
+    // This keeps the dropdown open for multiple selections, matching fixed filter behavior
+  };
+  
+  const handleLabsClear = () => {
+    // Explicitly remove the filter when X is clicked
+    const newFilters = { ...filters };
+    delete (newFilters as any).labs;
+    const updatedFilters = removeFromCreationOrder('labs', newFilters);
+    setFilters(updatedFilters);
   };
   
   // Operator change handlers for new filters
@@ -1051,7 +1116,7 @@ export function FilterBar() {
           : [...currentDiagnoses, diagnosisId];
         handleDiagnosesChange(newDiagnoses);
       },
-      onClear: () => handleDiagnosesChange([])
+      onClear: handleDiagnosesClear
     },
     { 
       key: 'medications', 
@@ -1072,7 +1137,7 @@ export function FilterBar() {
           : [...currentMedications, medicationId];
         handleMedicationsChange(newMedications);
       },
-      onClear: () => handleMedicationsChange([])
+      onClear: handleMedicationsClear
     }
   ], [allPossibleDiagnoses, allPossibleMedications, filters.medical, filters.diagnoses?.values, filters.medications?.values]);
   
@@ -1142,7 +1207,7 @@ export function FilterBar() {
             : [...currentTypes, valueId];
           handleDocTypeChange(newTypes);
         },
-        onClear: () => handleDocTypeChange([])
+        onClear: handleDocTypeClear
       },
       {
         key: 'author',
@@ -1157,7 +1222,7 @@ export function FilterBar() {
             : [...currentAuthors, valueId];
           handleAuthorChange(newAuthors);
         },
-        onClear: () => handleAuthorChange([])
+        onClear: handleAuthorClear
       },
       {
         key: 'facility',
@@ -1172,7 +1237,7 @@ export function FilterBar() {
             : [...currentFacilities, valueId];
           handleFacilityChange(newFacilities);
         },
-        onClear: () => handleFacilityChange([])
+        onClear: handleFacilityClear
       },
       {
         key: 'labs',
@@ -1187,7 +1252,7 @@ export function FilterBar() {
             : [...currentLabs, valueId];
           handleLabsChange(newLabs);
         },
-        onClear: () => handleLabsChange([])
+        onClear: handleLabsClear
       }
     ];
     
@@ -1195,7 +1260,16 @@ export function FilterBar() {
     return allAvailableFilters.filter(filter => !activeFilterKeys.has(filter.key));
   };
   
-  const moreFilters = getMoreFilters();
+  const moreFilters = React.useMemo(() => getMoreFilters(), [
+    filters.docType?.values?.length,
+    filters.author?.values?.length,
+    filters.facility?.values?.length,
+    filters.labs?.values?.length,
+    allPossibleTypes,
+    allPossibleAuthors,
+    allPossibleFacilities,
+    allPossibleLabs
+  ]);
   
   return (
         <FilterBarContainer>
@@ -1294,8 +1368,8 @@ export function FilterBar() {
                       handleMedicalChange({ medications, diagnoses, labs });
                     }}
                     onClear={() => handleMedicalChange({})}
-                    openValueMenuInitially={newlyCreatedPills.has('medical')}
-                    onDropdownClose={() => handleFilterDropdownClose('medical')}
+                    openValueMenuInitially={false}
+                    // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
               } else if (filter.key === 'diagnoses') {
@@ -1307,10 +1381,10 @@ export function FilterBar() {
                     values={allPossibleDiagnoses.map(diag => ({ id: diag, label: diag }))}
                     selectedValues={activeFilter.data?.values || []}
                     onValueChange={handleDiagnosesChange}
-                    onClear={() => handleDiagnosesChange([])}
+                    onClear={handleDiagnosesClear}
                     onOperatorChange={handleDiagnosesOperatorChange}
-                    openValueMenuInitially={newlyCreatedPills.has('diagnoses')}
-                    onDropdownClose={() => handleFilterDropdownClose('diagnoses')}
+                    openValueMenuInitially={false}
+                    // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
               } else if (filter.key === 'medications') {
@@ -1322,10 +1396,10 @@ export function FilterBar() {
                     values={allPossibleMedications.map(med => ({ id: med, label: med }))}
                     selectedValues={activeFilter.data?.values || []}
                     onValueChange={handleMedicationsChange}
-                    onClear={() => handleMedicationsChange([])}
+                    onClear={handleMedicationsClear}
                     onOperatorChange={handleMedicationsOperatorChange}
-                    openValueMenuInitially={newlyCreatedPills.has('medications')}
-                    onDropdownClose={() => handleFilterDropdownClose('medications')}
+                    openValueMenuInitially={false}
+                    // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
               }
@@ -1356,42 +1430,14 @@ export function FilterBar() {
             );
           })}
           
-          {/* Show dashed buttons for newly created non-pinned filters that don't have values yet */}
-          {Array.from(newlyCreatedPills).filter(key => !['medical', 'diagnoses', 'medications'].includes(key)).map(filterKey => {
-            // Check if this filter already has a value (in which case it will be rendered as a pill below)
-            const hasValue = filterHasValues(filterKey);
-            if (hasValue) return null; // Skip - will be rendered as pill below
-            
-            // Get filter metadata
-            const metadata = filterMetadata[filterKey];
-            if (!metadata) return null;
-            
-            return (
-              <QuickFilterButton
-                key={filterKey}
-                ref={(el) => {
-                  quickFilterRefs.current[filterKey] = el;
-                }}
-                onClick={() => {
-                  // Toggle dropdown menu for this filter
-                  if (activeQuickFilter === filterKey) {
-                    setActiveQuickFilter(null);
-                  } else {
-                    setActiveQuickFilter(filterKey);
-                  }
-                }}
-              >
-                <img src={metadata.icon} alt={metadata.label} width="16" height="16" />
-                {metadata.label}
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 'auto' }}>
-                  <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </QuickFilterButton>
-            );
-          })}
-          
           {/* Show other active filter pills (NOT pinned filters) AFTER the 3 pinned positions */}
-          {getActiveFiltersInOrder().filter(f => f.type !== 'medical' && f.type !== 'diagnoses' && f.type !== 'medications').map(filter => {
+          {getActiveFiltersInOrder().filter(f => {
+            // Exclude pinned filters
+            if (f.type === 'medical' || f.type === 'diagnoses' || f.type === 'medications') return false;
+            // Only show as pill if it has values (same logic as fixed filters)
+            if (!filterHasValues(f.key)) return false;
+            return true;
+          }).map(filter => {
             switch (filter.type) {
               case 'date':
                 return (
@@ -1422,7 +1468,7 @@ export function FilterBar() {
                       }
                     }}
                     onClear={() => handleDateChange({})}
-                    onDropdownClose={() => handleFilterDropdownClose('date')}
+                    onDropdownClose={newlyCreatedPills.has('date') ? () => handleFilterDropdownClose('date') : undefined}
                   />
                 );
               
@@ -1435,7 +1481,7 @@ export function FilterBar() {
                     values={allPossibleFacilities.map(facility => ({ id: facility, label: facility }))}
                     selectedValues={filter.data?.values || []}
                     onValueChange={handleFacilityChange}
-                    onClear={() => handleFacilityChange([])}
+                    onClear={handleFacilityClear}
                     onOperatorChange={handleFacilityOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('facility')}
                     onDropdownClose={() => handleFilterDropdownClose('facility')}
@@ -1474,8 +1520,8 @@ export function FilterBar() {
                       handleMedicalChange({ medications, diagnoses, labs });
                     }}
                     onClear={() => handleMedicalChange({})}
-                    openValueMenuInitially={newlyCreatedPills.has('medical')}
-                    onDropdownClose={() => handleFilterDropdownClose('medical')}
+                    openValueMenuInitially={false}
+                    // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
               
@@ -1488,7 +1534,7 @@ export function FilterBar() {
                     values={allPossibleAuthors.map(author => ({ id: author, label: author }))}
                     selectedValues={filter.data?.values || []}
                     onValueChange={handleAuthorChange}
-                    onClear={() => handleAuthorChange([])}
+                    onClear={handleAuthorClear}
                     onOperatorChange={handleAuthorOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('author')}
                     onDropdownClose={() => handleFilterDropdownClose('author')}
@@ -1504,7 +1550,7 @@ export function FilterBar() {
                     values={allPossibleTypes.map(type => ({ id: type, label: type }))}
                     selectedValues={filter.data?.values || []}
                     onValueChange={handleDocTypeChange}
-                    onClear={() => handleDocTypeChange([])}
+                    onClear={handleDocTypeClear}
                     onOperatorChange={handleDocTypeOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('docType')}
                     onDropdownClose={() => handleFilterDropdownClose('docType')}
@@ -1520,10 +1566,10 @@ export function FilterBar() {
                     values={medicationValues}
                     selectedValues={filter.data?.values || []}
                     onValueChange={handleMedicationsChange}
-                    onClear={() => handleMedicationsChange([])}
+                    onClear={handleMedicationsClear}
                     onOperatorChange={handleMedicationsOperatorChange}
-                    openValueMenuInitially={newlyCreatedPills.has('medications')}
-                    onDropdownClose={() => handleFilterDropdownClose('medications')}
+                    openValueMenuInitially={false}
+                    // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
               
@@ -1536,10 +1582,10 @@ export function FilterBar() {
                     values={diagnosisValues}
                     selectedValues={filter.data?.values || []}
                     onValueChange={handleDiagnosesChange}
-                    onClear={() => handleDiagnosesChange([])}
+                    onClear={handleDiagnosesClear}
                     onOperatorChange={handleDiagnosesOperatorChange}
-                    openValueMenuInitially={newlyCreatedPills.has('diagnoses')}
-                    onDropdownClose={() => handleFilterDropdownClose('diagnoses')}
+                    openValueMenuInitially={false}
+                    // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
               
@@ -1552,7 +1598,7 @@ export function FilterBar() {
                     values={labValues}
                     selectedValues={filter.data?.values || []}
                     onValueChange={handleLabsChange}
-                    onClear={() => handleLabsChange([])}
+                    onClear={handleLabsClear}
                     onOperatorChange={handleLabsOperatorChange}
                     openValueMenuInitially={newlyCreatedPills.has('labs')}
                     onDropdownClose={() => handleFilterDropdownClose('labs')}
@@ -1562,6 +1608,40 @@ export function FilterBar() {
               default:
                 return null;
             }
+          })}
+          
+          {/* Show dashed buttons only for filters without values (same as fixed filters) */}
+          {Array.from(new Set([
+            // Newly created filters without values
+            ...Array.from(newlyCreatedPills)
+              .filter(key => !['medical', 'diagnoses', 'medications'].includes(key))
+              .filter(key => !filterHasValues(key))
+          ])).map(filterKey => {
+            const metadata = filterMetadata[filterKey];
+            if (!metadata) return null;
+            
+            return (
+              <QuickFilterButton
+                key={filterKey}
+                ref={(el) => {
+                  quickFilterRefs.current[filterKey] = el;
+                }}
+                onClick={() => {
+                  // Toggle dropdown menu for this filter
+                  if (activeQuickFilter === filterKey) {
+                    setActiveQuickFilter(null);
+                  } else {
+                    setActiveQuickFilter(filterKey);
+                  }
+                }}
+              >
+                <img src={metadata.icon} alt={metadata.label} width="16" height="16" />
+                {metadata.label}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 'auto' }}>
+                  <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </QuickFilterButton>
+            );
           })}
           
           {/* Original conditional logic - commented out for debugging */}
@@ -1599,8 +1679,16 @@ export function FilterBar() {
                             // Close the more filters dropdown FIRST
                             closeMoreFilters();
                             
+                            // Initialize the filter with empty values in state
+                            setFilters(prevFilters => {
+                              const newFilters = {
+                                ...prevFilters,
+                                [filter.key]: { values: [], operator: 'is-any-of' }
+                              };
+                              return addToCreationOrder(filter.key, newFilters);
+                            });
+                            
                             // Mark as newly created and open the dropdown
-                            // Don't create the filter yet - it will be created when a value is selected
                             setNewlyCreatedPills(prev => {
                               const newSet = new Set(prev);
                               newSet.add(filter.key);
@@ -1622,7 +1710,7 @@ export function FilterBar() {
             
             {/* Clear all button - only show when there are active filters */}
             {hasActiveFilters && (
-              <ClearButton onClick={clearFilters}>
+              <ClearButton onClick={handleClearAllFilters}>
                 <img src="/svg/cancelCircle.svg" alt="Clear" width="16" height="16" />
                 Clear
               </ClearButton>
@@ -1633,18 +1721,32 @@ export function FilterBar() {
           
           {/* Quick Filter Menus */}
           {activeQuickFilter && (() => {
-            const filter = quickFilters.find(f => f.key === activeQuickFilter);
+            // Check both pinned filters (quickFilters) and More filters (moreFilters)
+            const pinnedFilter = quickFilters.find(f => f.key === activeQuickFilter);
+            const moreFilterDef = !pinnedFilter ? moreFilters.find(f => f.key === activeQuickFilter) : undefined;
+            const filter = (pinnedFilter || moreFilterDef) as any;
             if (!filter) return null;
             
             // Determine if this is a multiselect filter
-            const isMultiselect = filter.key === 'medical' || filter.key === 'diagnoses' || filter.key === 'medications';
+            // Pinned filters: medical, diagnoses, medications
+            // More filters: author, facility, docType, labs
+            const isMultiselect = filter.key === 'medical' || 
+                                 filter.key === 'diagnoses' || 
+                                 filter.key === 'medications' ||
+                                 filter.key === 'author' ||
+                                 filter.key === 'facility' ||
+                                 filter.key === 'docType' ||
+                                 filter.key === 'labs';
             
             const filteredValues = getFilteredMenuItems(filter);
             
             // Determine if search input should be shown (only for filters with many options)
             const shouldShowSearch = (filter.key === 'diagnoses' && allPossibleDiagnoses.length > 5) ||
                                    (filter.key === 'medications' && allPossibleMedications.length > 5) ||
-                                   (filter.key === 'docType' && allPossibleTypes.length > 5);
+                                   (filter.key === 'docType' && allPossibleTypes.length > 5) ||
+                                   (filter.key === 'author' && allPossibleAuthors.length > 5) ||
+                                   (filter.key === 'facility' && allPossibleFacilities.length > 5) ||
+                                   (filter.key === 'labs' && allPossibleLabs.length > 5);
             // Medical Entity doesn't need search - only has 3 options (Medications, Diagnoses, Labs)
             
             return (
@@ -1701,6 +1803,14 @@ export function FilterBar() {
                       } else if (value.id === 'labs') {
                         isSelected = (medical.labs || []).length > 0;
                       }
+                    } else if (filter.key === 'author') {
+                      isSelected = (filters.author?.values || []).includes(value.id);
+                    } else if (filter.key === 'facility') {
+                      isSelected = (filters.facility?.values || []).includes(value.id);
+                    } else if (filter.key === 'docType') {
+                      isSelected = (filters.docType?.values || []).includes(value.id);
+                    } else if (filter.key === 'labs') {
+                      isSelected = (filters.labs?.values || []).includes(value.id);
                     }
                     
                     return (

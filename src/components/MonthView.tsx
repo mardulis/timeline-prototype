@@ -187,6 +187,11 @@ const DocumentIcon = styled.div<{ isSelected: boolean }>`
   align-items: center;
   justify-content: center;
   font-size: 12px;
+  
+  /* Apply blue filter to icon when selected */
+  img {
+    filter: ${props => props.isSelected ? 'brightness(0) saturate(100%) invert(42%) sepia(96%) saturate(1676%) hue-rotate(201deg) brightness(97%) contrast(93%)' : 'none'};
+  }
 `;
 
 const DocumentInfo = styled.div`
@@ -199,6 +204,10 @@ const DocumentTitle = styled.div`
   color: inherit;
   margin-bottom: 2px;
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
 `;
 
 const DocumentDate = styled.div`
@@ -345,7 +354,7 @@ const MonthView: React.FC<ViewProps> = ({ docs, viewMode = 'titles', selectedDoc
                             </DocumentIcon>
                           
                             <DocumentInfo>
-                              <DocumentTitle>
+                              <DocumentTitle title={getItemDisplayName(item)}>
                                 {highlightText(getItemDisplayName(item), query)}
                               </DocumentTitle>
                               <DocumentDate>

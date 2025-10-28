@@ -389,7 +389,10 @@ export default function FilterRulePill(props: FilterRulePillProps) {
                     role="menuitemcheckbox"
                     aria-checked={checked}
                     className={cls.valueRow}
-                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       toggle(opt.id);
