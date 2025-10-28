@@ -30,114 +30,6 @@ const LeftControls = styled.div`
   gap: 16px;
 `;
 
-const RightControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-left: auto;
-`;
-
-const ViewByContainer = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const ViewByLabel = styled.span`
-  font-size: 13px;
-  font-weight: 500;
-  color: #6b7280;
-  font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-`;
-
-const ViewByDropdownButton = styled.button<{ isOpen?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 8px 12px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #1f2937;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  width: 158px;
-  font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  
-  span {
-    flex: 1;
-    text-align: left;
-  }
-  
-  &:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-  }
-  
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-`;
-
-const ViewByDropdownMenu = styled.div<{ isOpen: boolean }>`
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  padding: 8px;
-  z-index: 50001;
-  opacity: ${props => props.isOpen ? 1 : 0};
-  pointer-events: ${props => props.isOpen ? 'auto' : 'none'};
-  transition: opacity 0.2s ease;
-  max-height: 280px;
-  overflow-y: auto;
-`;
-
-const ViewByMenuItem = styled.button<{ isSelected?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 4px;
-  background: ${props => props.isSelected ? '#e0f2fe' : 'transparent'};
-  border: none;
-  border-radius: 10px;
-  text-align: left;
-  font-size: 14px;
-  font-weight: ${props => props.isSelected ? 500 : 400};
-  color: ${props => props.isSelected ? '#2582ff' : '#1f2937'};
-  cursor: pointer;
-  transition: background 0.15s ease;
-  font-family: 'Switzer', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  
-  img {
-    flex-shrink: 0;
-    ${props => props.isSelected && `
-      filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(3261%) hue-rotate(202deg) brightness(102%) contrast(101%);
-    `}
-  }
-  
-  &:hover {
-    background: ${props => props.isSelected ? '#e0f2fe' : '#f9fafb'};
-  }
-`;
-
-const ChevronIcon = styled.svg<{ isOpen?: boolean }>`
-  width: 16px;
-  height: 16px;
-  transition: transform 0.2s ease;
-  transform: rotate(${props => props.isOpen ? '180deg' : '0deg'});
-  flex-shrink: 0;
-`;
 
 
 const YearChip = styled.div`
@@ -286,31 +178,7 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
   const [currentDay, setCurrentDay] = useState(propCurrentDay);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [highlightedDate, setHighlightedDate] = useState<Date | null>(null);
-  const [isViewByDropdownOpen, setIsViewByDropdownOpen] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
-  const viewByRef = useRef<HTMLDivElement>(null);
-  
-  // View By dropdown data
-  const viewModeLabels: Record<ViewMode, string> = {
-    titles: 'Titles',
-    medications: 'Medications',
-    diagnosis: 'Diagnoses',
-    labs: 'Lab Results'
-  };
-  
-  const viewModeIcons: Record<ViewMode, string> = {
-    titles: '/svg/Document.svg',
-    medications: '/svg/Medications.svg',
-    diagnosis: '/svg/Diagnosis.svg',
-    labs: '/svg/Labs.svg'
-  };
-  
-  const handleViewModeSelect = (mode: ViewMode) => {
-    if (onViewModeChange) {
-      onViewModeChange(mode);
-    }
-    setIsViewByDropdownOpen(false);
-  };
 
   // Sync with props
   useEffect(() => {
@@ -362,22 +230,6 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
     };
   }, [isDatePickerVisible]);
 
-  // Handle click outside to close ViewBy dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (viewByRef.current && !viewByRef.current.contains(event.target as Node)) {
-        setIsViewByDropdownOpen(false);
-      }
-    };
-
-    if (isViewByDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isViewByDropdownOpen]);
 
   const handlePrevYear = () => {
     onManualNavigationStart?.();
@@ -630,34 +482,6 @@ const SearchAndControls: React.FC<SearchAndControlsProps> = ({
             </MonthSelector>
           )}
         </LeftControls>
-        
-        <RightControls>
-          <ViewByContainer ref={viewByRef}>
-            <ViewByLabel>View by</ViewByLabel>
-            <ViewByDropdownButton
-              isOpen={isViewByDropdownOpen}
-              onClick={() => setIsViewByDropdownOpen(!isViewByDropdownOpen)}
-            >
-              <img src={viewModeIcons[viewMode]} alt={viewModeLabels[viewMode]} width="16" height="16" />
-              <span>{viewModeLabels[viewMode]}</span>
-              <ChevronIcon isOpen={isViewByDropdownOpen} viewBox="0 0 16 16" fill="none">
-                <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </ChevronIcon>
-            </ViewByDropdownButton>
-            <ViewByDropdownMenu isOpen={isViewByDropdownOpen}>
-              {(['titles', 'medications', 'diagnosis', 'labs'] as ViewMode[]).map((mode) => (
-                <ViewByMenuItem
-                  key={mode}
-                  isSelected={viewMode === mode}
-                  onClick={() => handleViewModeSelect(mode)}
-                >
-                  <img src={viewModeIcons[mode]} alt={viewModeLabels[mode]} width="16" height="16" />
-                  {viewModeLabels[mode]}
-                </ViewByMenuItem>
-              ))}
-            </ViewByDropdownMenu>
-          </ViewByContainer>
-        </RightControls>
       </ControlsRow>
     </SearchControlsContainer>
   );

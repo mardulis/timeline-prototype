@@ -10,6 +10,8 @@ export interface DocumentData {
   medications?: string[];
   diagnoses?: string[];
   labs?: string[];
+  bodyParts?: string[];
+  substances?: string[];
 }
 
 // Mock data generators for missing fields
@@ -126,6 +128,45 @@ const generateMockLabs = (): string[] => {
     'Blood Pressure Reading'
   ];
   return [labs[Math.floor(Math.random() * labs.length)]];
+};
+
+const generateMockBodyParts = (): string[] => {
+  const bodyParts = [
+    'Head', 'Neck', 'Chest', 'Abdomen', 'Back', 'Left Arm', 'Right Arm',
+    'Left Leg', 'Right Leg', 'Left Hand', 'Right Hand', 'Left Foot', 'Right Foot',
+    'Left Shoulder', 'Right Shoulder', 'Left Knee', 'Right Knee', 'Left Hip', 'Right Hip',
+    'Spine', 'Pelvis', 'Heart', 'Lungs', 'Liver', 'Kidneys', 'Brain', 'Eyes', 'Ears'
+  ];
+  
+  // Return 1-3 random body parts
+  const count = Math.floor(Math.random() * 3) + 1;
+  const selected: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const part = bodyParts[Math.floor(Math.random() * bodyParts.length)];
+    if (!selected.includes(part)) {
+      selected.push(part);
+    }
+  }
+  return selected.length > 0 ? selected : [bodyParts[0]];
+};
+
+const generateMockSubstances = (): string[] => {
+  const substances = [
+    'Alcohol', 'Tobacco', 'Cannabis', 'Caffeine', 'Sugar', 'Salt',
+    'Contrast Dye', 'Latex', 'Penicillin', 'Pollen', 'Dust', 'Pet Dander',
+    'Shellfish', 'Nuts', 'Eggs', 'Milk', 'Wheat', 'Soy'
+  ];
+  
+  // Return 1-2 random substances
+  const count = Math.floor(Math.random() * 2) + 1;
+  const selected: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const substance = substances[Math.floor(Math.random() * substances.length)];
+    if (!selected.includes(substance)) {
+      selected.push(substance);
+    }
+  }
+  return selected.length > 0 ? selected : [substances[0]];
 };
 
 // Expected CSV columns for validation
@@ -249,6 +290,8 @@ export const parseCSV = (csvContent: string): DocumentData[] => {
     let medications: string[] | undefined;
     let diagnoses: string[] | undefined;
     let labs: string[] | undefined;
+    let bodyParts: string[] | undefined;
+    let substances: string[] | undefined;
     
     if (docType.toLowerCase().includes('medication')) {
       medications = summary.toLowerCase().includes('medication') ? 
@@ -271,6 +314,10 @@ export const parseCSV = (csvContent: string): DocumentData[] => {
       labs = generateMockLabs();
     }
     
+    // Always generate random bodyParts and substances
+    bodyParts = generateMockBodyParts();
+    substances = generateMockSubstances();
+    
     documents.push({
       id,
       title,
@@ -282,7 +329,9 @@ export const parseCSV = (csvContent: string): DocumentData[] => {
       summary: summary || undefined,
       medications,
       diagnoses,
-      labs
+      labs,
+      bodyParts,
+      substances
     });
   }
   

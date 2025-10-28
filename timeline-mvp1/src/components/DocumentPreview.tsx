@@ -288,9 +288,11 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
   const { query } = useSearch();
   const [activeTab, setActiveTab] = useState<'details' | 'pdf'>('details');
   const [openAccordions, setOpenAccordions] = useState<{ [key: string]: boolean }>({
-    medications: true,
     diagnoses: true,
-    labs: true
+    medications: true,
+    labs: true,
+    bodyParts: true,
+    substances: true
   });
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
@@ -485,45 +487,14 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
 
           <AccordionCard>
             <AccordionHeader
-              isOpen={openAccordions.medications}
-              onClick={() => toggleAccordion('medications')}
-            >
-              <AccordionTitle>
-                <AccordionIcon>
-                  <img src="/svg/Medications.svg" alt="Medications" width="16" height="16" />
-                </AccordionIcon>
-                Medication ({document.medications.length})
-              </AccordionTitle>
-              <AccordionToggle isOpen={openAccordions.medications}>
-                <img 
-                  src={openAccordions.medications ? "/svg/chevronUp.svg" : "/svg/chevronDown.svg"} 
-                  alt={openAccordions.medications ? "Collapse" : "Expand"} 
-                  width="16" 
-                  height="16" 
-                />
-              </AccordionToggle>
-            </AccordionHeader>
-            <AccordionContent isOpen={openAccordions.medications}>
-              <AccordionInner>
-                <SubstanceList>
-                  {document.medications.map((med, index) => (
-                    <SubstanceItem key={index}>{highlightText(med, query)}</SubstanceItem>
-                  ))}
-                </SubstanceList>
-              </AccordionInner>
-            </AccordionContent>
-          </AccordionCard>
-
-          <AccordionCard>
-            <AccordionHeader
               isOpen={openAccordions.diagnoses}
               onClick={() => toggleAccordion('diagnoses')}
             >
               <AccordionTitle>
                 <AccordionIcon>
-                  <img src="/svg/Diagnosis.svg" alt="Diagnosis" width="16" height="16" />
+                  <img src="/svg/Diagnosis.svg" alt="Diagnoses" width="16" height="16" />
                 </AccordionIcon>
-                Diagnosis ({document.diagnoses.length})
+                Diagnoses ({document.diagnoses.length})
               </AccordionTitle>
               <AccordionToggle isOpen={openAccordions.diagnoses}>
                 <img 
@@ -547,14 +518,45 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
 
           <AccordionCard>
             <AccordionHeader
+              isOpen={openAccordions.medications}
+              onClick={() => toggleAccordion('medications')}
+            >
+              <AccordionTitle>
+                <AccordionIcon>
+                  <img src="/svg/Medications.svg" alt="Medications" width="16" height="16" />
+                </AccordionIcon>
+                Medications ({document.medications.length})
+              </AccordionTitle>
+              <AccordionToggle isOpen={openAccordions.medications}>
+                <img 
+                  src={openAccordions.medications ? "/svg/chevronUp.svg" : "/svg/chevronDown.svg"} 
+                  alt={openAccordions.medications ? "Collapse" : "Expand"} 
+                  width="16" 
+                  height="16" 
+                />
+              </AccordionToggle>
+            </AccordionHeader>
+            <AccordionContent isOpen={openAccordions.medications}>
+              <AccordionInner>
+                <SubstanceList>
+                  {document.medications.map((med, index) => (
+                    <SubstanceItem key={index}>{highlightText(med, query)}</SubstanceItem>
+                  ))}
+                </SubstanceList>
+              </AccordionInner>
+            </AccordionContent>
+          </AccordionCard>
+
+          <AccordionCard>
+            <AccordionHeader
               isOpen={openAccordions.labs}
               onClick={() => toggleAccordion('labs')}
             >
               <AccordionTitle>
                 <AccordionIcon>
-                  <img src="/svg/Labs.svg" alt="Labs" width="16" height="16" />
+                  <img src="/svg/Labs.svg" alt="Lab Results" width="16" height="16" />
                 </AccordionIcon>
-                Labs ({document.labs.length})
+                Lab Results ({document.labs.length})
               </AccordionTitle>
               <AccordionToggle isOpen={openAccordions.labs}>
                 <img 
@@ -570,6 +572,68 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ document, onClose }) 
                 <SubstanceList>
                   {document.labs.map((lab, index) => (
                     <SubstanceItem key={index}>{highlightText(lab, query)}</SubstanceItem>
+                  ))}
+                </SubstanceList>
+              </AccordionInner>
+            </AccordionContent>
+          </AccordionCard>
+
+          <AccordionCard>
+            <AccordionHeader
+              isOpen={openAccordions.bodyParts}
+              onClick={() => toggleAccordion('bodyParts')}
+            >
+              <AccordionTitle>
+                <AccordionIcon>
+                  <img src="/svg/profile.svg" alt="Body Parts" width="16" height="16" />
+                </AccordionIcon>
+                Body Parts ({document.bodyParts?.length || 0})
+              </AccordionTitle>
+              <AccordionToggle isOpen={openAccordions.bodyParts}>
+                <img 
+                  src={openAccordions.bodyParts ? "/svg/chevronUp.svg" : "/svg/chevronDown.svg"} 
+                  alt={openAccordions.bodyParts ? "Collapse" : "Expand"} 
+                  width="16" 
+                  height="16" 
+                />
+              </AccordionToggle>
+            </AccordionHeader>
+            <AccordionContent isOpen={openAccordions.bodyParts}>
+              <AccordionInner>
+                <SubstanceList>
+                  {(document.bodyParts || []).map((bodyPart, index) => (
+                    <SubstanceItem key={index}>{highlightText(bodyPart, query)}</SubstanceItem>
+                  ))}
+                </SubstanceList>
+              </AccordionInner>
+            </AccordionContent>
+          </AccordionCard>
+
+          <AccordionCard>
+            <AccordionHeader
+              isOpen={openAccordions.substances}
+              onClick={() => toggleAccordion('substances')}
+            >
+              <AccordionTitle>
+                <AccordionIcon>
+                  <img src="/svg/cells.svg" alt="Substances" width="16" height="16" />
+                </AccordionIcon>
+                Substances ({document.substances?.length || 0})
+              </AccordionTitle>
+              <AccordionToggle isOpen={openAccordions.substances}>
+                <img 
+                  src={openAccordions.substances ? "/svg/chevronUp.svg" : "/svg/chevronDown.svg"} 
+                  alt={openAccordions.substances ? "Collapse" : "Expand"} 
+                  width="16" 
+                  height="16" 
+                />
+              </AccordionToggle>
+            </AccordionHeader>
+            <AccordionContent isOpen={openAccordions.substances}>
+              <AccordionInner>
+                <SubstanceList>
+                  {(document.substances || []).map((substance, index) => (
+                    <SubstanceItem key={index}>{highlightText(substance, query)}</SubstanceItem>
                   ))}
                 </SubstanceList>
               </AccordionInner>
