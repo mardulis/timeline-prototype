@@ -1562,26 +1562,20 @@ export function FilterBar() {
             if (!filter) return null;
             
             // Determine if this is a multiselect filter
-            // Pinned filters: medical, diagnoses, medications
-            // More filters: author, facility, docType, labs
-            const isMultiselect = filter.key === 'medical' || 
-                                 filter.key === 'diagnoses' || 
-                                 filter.key === 'medications' ||
+            // Pinned filters: title, author
+            // More filters: facility, docType
+            const isMultiselect = filter.key === 'title' || 
                                  filter.key === 'author' ||
                                  filter.key === 'facility' ||
-                                 filter.key === 'docType' ||
-                                 filter.key === 'labs';
+                                 filter.key === 'docType';
             
             const filteredValues = getFilteredMenuItems(filter);
             
             // Determine if search input should be shown (only for filters with many options)
-            const shouldShowSearch = (filter.key === 'diagnoses' && allPossibleDiagnoses.length > 5) ||
-                                   (filter.key === 'medications' && allPossibleMedications.length > 5) ||
+            const shouldShowSearch = (filter.key === 'title' && allPossibleTitles.length > 5) ||
                                    (filter.key === 'docType' && allPossibleTypes.length > 5) ||
                                    (filter.key === 'author' && allPossibleAuthors.length > 5) ||
-                                   (filter.key === 'facility' && allPossibleFacilities.length > 5) ||
-                                   (filter.key === 'labs' && allPossibleLabs.length > 5);
-            // Medical Entity doesn't need search - only has 3 options (Medications, Diagnoses, Labs)
+                                   (filter.key === 'facility' && allPossibleFacilities.length > 5);
             
             return (
               <QuickFilterMenu
@@ -1624,27 +1618,14 @@ export function FilterBar() {
                   {filteredValues.map(value => {
                     // Determine if this value is currently selected
                     let isSelected = false;
-                    if (filter.key === 'diagnoses') {
-                      isSelected = (filters.diagnoses?.values || []).includes(value.id);
-                    } else if (filter.key === 'medications') {
-                      isSelected = (filters.medications?.values || []).includes(value.id);
-                    } else if (filter.key === 'medical') {
-                      const medical = filters.medical || { medications: [], diagnoses: [], labs: [] };
-                      if (value.id === 'medications') {
-                        isSelected = (medical.medications || []).length > 0;
-                      } else if (value.id === 'diagnoses') {
-                        isSelected = (medical.diagnoses || []).length > 0;
-                      } else if (value.id === 'labs') {
-                        isSelected = (medical.labs || []).length > 0;
-                      }
+                    if (filter.key === 'title') {
+                      isSelected = (filters.title?.values || []).includes(value.id);
                     } else if (filter.key === 'author') {
                       isSelected = (filters.author?.values || []).includes(value.id);
                     } else if (filter.key === 'facility') {
                       isSelected = (filters.facility?.values || []).includes(value.id);
                     } else if (filter.key === 'docType') {
                       isSelected = (filters.docType?.values || []).includes(value.id);
-                    } else if (filter.key === 'labs') {
-                      isSelected = (filters.labs?.values || []).includes(value.id);
                     }
                     
                     return (
