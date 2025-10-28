@@ -1381,6 +1381,13 @@ export function FilterBar() {
                   quickFilterRefs.current[filter.key] = el;
                 }}
                 onClick={() => {
+                  // Date filter: Don't open dropdown (needs date picker instead)
+                  if (filter.key === 'date') {
+                    // TODO: Implement date picker for date range selection
+                    console.log('Date filter clicked - date picker not yet implemented');
+                    return;
+                  }
+                  
                   // Toggle dropdown menu for this filter
                   if (activeQuickFilter === filter.key) {
                     setActiveQuickFilter(null);
