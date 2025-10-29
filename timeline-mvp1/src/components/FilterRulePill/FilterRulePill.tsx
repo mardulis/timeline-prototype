@@ -27,6 +27,7 @@ export interface FilterRulePillProps {
   className?: string;
   style?: React.CSSProperties;
   openValueMenuInitially?: boolean; // New prop to control initial value menu state
+  disableValueMenu?: boolean; // Disable value dropdown (makes value static/read-only)
 }
 
 export default function FilterRulePill(props: FilterRulePillProps) {
@@ -45,7 +46,8 @@ export default function FilterRulePill(props: FilterRulePillProps) {
     onDropdownClose,
     className,
     style,
-    openValueMenuInitially = false
+    openValueMenuInitially = false,
+    disableValueMenu = false
   } = props;
 
   const { openDropdown, setOpenDropdown } = useDropdown();
@@ -320,6 +322,15 @@ export default function FilterRulePill(props: FilterRulePillProps) {
         className={`${cls.segmentBtn} ${valOpen ? cls.open : ''}`}
         data-open={valOpen}
         onClick={() => {
+          // Don't open dropdown if disabled
+          if (disableValueMenu) {
+            // Still trigger onValueChange for date filters to open DatePicker
+            if (onValueChange) {
+              onValueChange(currentValue);
+            }
+            return;
+          }
+          
           if (!valOpen) {
             // Reset scroll position when opening
             isTogglingRef.current = false;
@@ -329,6 +340,7 @@ export default function FilterRulePill(props: FilterRulePillProps) {
         }}
         aria-expanded={valOpen}
         aria-haspopup="menu"
+        style={{ cursor: disableValueMenu ? 'default' : 'pointer' }}
       >
         <span className={`${cls.valueText} ${!valueLabel ? cls.isEmpty : ''}`}>
           {valueLabel || "Select value"}

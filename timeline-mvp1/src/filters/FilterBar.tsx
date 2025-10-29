@@ -1382,6 +1382,10 @@ export function FilterBar() {
                   dateValue = 'DOL';
                 }
                 
+                // DOL filters: value is static (not clickable)
+                // Date/Range filters: value is clickable to open DatePicker
+                const isDOLFilter = mode === 'before-dol' || mode === 'after-dol';
+                
                 return (
                   <FilterRulePill
                     key="date"
@@ -1394,9 +1398,21 @@ export function FilterBar() {
                       { id: 'between', label: 'Between' }
                     ]}
                     operator={operator}
-                    values={dateValue ? [{ id: 'date-value', label: dateValue }] : []}
-                    value={dateValue ? ['date-value'] : []}
-                    onValueChange={() => {}}
+                    values={dateValue ? [{ id: isDOLFilter ? 'dol-value' : 'date-value', label: dateValue }] : []}
+                    value={dateValue ? [isDOLFilter ? 'dol-value' : 'date-value'] : []}
+                    onValueChange={(newValue) => {
+                      // Only allow changing value for specific date and date range
+                      if (!isDOLFilter && (mode === 'specific' || mode === 'range')) {
+                        // Open DatePicker to select new date
+                        setDatePickerMode(mode as 'specific' | 'range');
+                        if (mode === 'specific' && dateData.start) {
+                          setTempDateRange({ start: new Date(dateData.start), end: null });
+                        } else if (mode === 'range' && dateData.start && dateData.end) {
+                          setTempDateRange({ start: new Date(dateData.start), end: null });
+                        }
+                        setShowDatePicker(true);
+                      }
+                    }}
                     onClear={() => {
                       const newFilters = { ...filters };
                       delete (newFilters as any).date;
@@ -1404,6 +1420,8 @@ export function FilterBar() {
                       setFilters(updatedFilters);
                     }}
                     openValueMenuInitially={false}
+                    // Disable value menu for DOL filters
+                    disableValueMenu={isDOLFilter}
                     // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
