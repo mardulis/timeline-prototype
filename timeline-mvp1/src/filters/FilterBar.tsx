@@ -5,7 +5,8 @@ import FilterRulePill from '../components/FilterRulePill/FilterRulePill';
 import MultiselectFilter from '../components/MultiselectFilter';
 import { useSearch } from '../features/search/SearchCtx';
 import { useDropdown } from '../contexts/DropdownContext';
-import { ViewMode } from '../types/Timeline';
+import { ViewMode, Doc } from '../types/Timeline';
+import DatePicker from '../components/DatePicker';
 
 const FilterBarContainer = styled.div`
   display: flex;
@@ -407,7 +408,8 @@ export function FilterBar() {
   const [showFilterSection, setShowFilterSection] = React.useState<boolean>(false);
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [datePickerMode, setDatePickerMode] = React.useState<'specific' | 'range' | null>(null);
-  const [tempDateRange, setTempDateRange] = React.useState<{ start?: string; end?: string }>({});
+  const [tempDateRange, setTempDateRange] = React.useState<{ start?: Date | null; end?: Date | null }>({ start: null, end: null });
+  const dateFilterButtonRef = useRef<HTMLButtonElement | null>(null);
   const quickFilterRefs = React.useRef<{ [key: string]: HTMLButtonElement | null }>({});
   const quickFilterScrollRef = React.useRef<HTMLDivElement | null>(null);
   const quickFilterScrollPosition = React.useRef<number>(0);
@@ -1138,17 +1140,17 @@ export function FilterBar() {
       onValueChange: (value: string | null) => {
         // Date filter - single select (choose date mode)
         if (value === 'specific') {
-          // Show date picker for single date selection
+          // Close dropdown and show DatePicker component for single date selection
+          setActiveQuickFilter(null);
           setDatePickerMode('specific');
-          setShowDatePicker(true);
-          setTempDateRange({});
-          // Don't close the dropdown yet - user needs to pick a date
+          setTempDateRange({ start: null, end: null });
+          setTimeout(() => setShowDatePicker(true), 100);
         } else if (value === 'range') {
-          // Show date picker for range selection
+          // Close dropdown and show DatePicker component for range selection
+          setActiveQuickFilter(null);
           setDatePickerMode('range');
-          setShowDatePicker(true);
-          setTempDateRange({});
-          // Don't close the dropdown yet - user needs to pick dates
+          setTempDateRange({ start: null, end: null });
+          setTimeout(() => setShowDatePicker(true), 100);
         } else if (value === 'before-dol') {
           // Set to DOL date automatically
           const dolDate = new Date(2020, 2, 27); // Will get from getDOLDate()
@@ -1428,6 +1430,9 @@ export function FilterBar() {
                 key={filter.key}
                 ref={(el) => {
                   quickFilterRefs.current[filter.key] = el;
+                  if (filter.key === 'date') {
+                    dateFilterButtonRef.current = el;
+                  }
                 }}
                 onClick={() => {
                   // Toggle dropdown menu for this filter
@@ -1728,131 +1733,54 @@ export function FilterBar() {
                     );
                   })}
                 </div>
-                
-                {/* Date Picker UI - shown after selecting Specific Date or Date Range */}
-                {filter.key === 'date' && showDatePicker && (
-                  <div style={{
-                    padding: '16px',
-                    borderTop: '1px solid #e5e7eb',
-                    marginTop: '8px'
-                  }}>
-                    {datePickerMode === 'specific' && (
-                      <div>
-                        <label style={{
-                          display: 'block',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                          color: '#6b7280',
-                          marginBottom: '8px'
-                        }}>
-                          Select Date
-                        </label>
-                        <input
-                          type="date"
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setFilters(prevFilters => addToCreationOrder('date', {
-                                ...prevFilters,
-                                date: { operator: 'is', start: e.target.value, mode: 'specific' }
-                              }));
-                              setShowDatePicker(false);
-                              setActiveQuickFilter(null);
-                            }
-                          }}
-                        />
-                      </div>
-                    )}
-                    {datePickerMode === 'range' && (
-                      <div>
-                        <label style={{
-                          display: 'block',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                          color: '#6b7280',
-                          marginBottom: '8px'
-                        }}>
-                          Start Date
-                        </label>
-                        <input
-                          type="date"
-                          value={tempDateRange.start || ''}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            marginBottom: '12px'
-                          }}
-                          onChange={(e) => {
-                            setTempDateRange(prev => ({ ...prev, start: e.target.value }));
-                          }}
-                        />
-                        <label style={{
-                          display: 'block',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                          color: '#6b7280',
-                          marginBottom: '8px'
-                        }}>
-                          End Date
-                        </label>
-                        <input
-                          type="date"
-                          value={tempDateRange.end || ''}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            marginBottom: '12px'
-                          }}
-                          onChange={(e) => {
-                            setTempDateRange(prev => ({ ...prev, end: e.target.value }));
-                          }}
-                        />
-                        <button
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#2582FF',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => {
-                            if (tempDateRange.start && tempDateRange.end) {
-                              setFilters(prevFilters => addToCreationOrder('date', {
-                                ...prevFilters,
-                                date: { operator: 'between', start: tempDateRange.start, end: tempDateRange.end, mode: 'range' }
-                              }));
-                              setShowDatePicker(false);
-                              setActiveQuickFilter(null);
-                              setTempDateRange({});
-                            }
-                          }}
-                          disabled={!tempDateRange.start || !tempDateRange.end}
-                        >
-                          Apply
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
               </QuickFilterMenu>
             );
           })()}
+          
+          {/* DatePicker Component - shown outside dropdown */}
+          {showDatePicker && dateFilterButtonRef.current && (
+            <DatePicker
+              selectedDate={tempDateRange.start || new Date()}
+              docs={allDocs}
+              onDateSelect={(date: Date) => {
+                if (datePickerMode === 'specific') {
+                  // Single date selection
+                  setFilters(prevFilters => addToCreationOrder('date', {
+                    ...prevFilters,
+                    date: { operator: 'is', start: date.toISOString().split('T')[0], mode: 'specific' }
+                  }));
+                  setShowDatePicker(false);
+                } else if (datePickerMode === 'range') {
+                  // Range selection - set start or end
+                  if (!tempDateRange.start) {
+                    setTempDateRange({ start: date, end: null });
+                  } else if (!tempDateRange.end) {
+                    const start = tempDateRange.start;
+                    const end = date;
+                    // Ensure start is before end
+                    const [startDate, endDate] = start > end ? [end, start] : [start, end];
+                    setFilters(prevFilters => addToCreationOrder('date', {
+                      ...prevFilters,
+                      date: { 
+                        operator: 'between', 
+                        start: startDate.toISOString().split('T')[0], 
+                        end: endDate.toISOString().split('T')[0], 
+                        mode: 'range' 
+                      }
+                    }));
+                    setShowDatePicker(false);
+                    setTempDateRange({ start: null, end: null });
+                  }
+                }
+              }}
+              onClose={() => {
+                setShowDatePicker(false);
+                setTempDateRange({ start: null, end: null });
+              }}
+              isVisible={showDatePicker}
+              triggerRef={dateFilterButtonRef}
+            />
+          )}
         </FilterBarContainer>
       );
     }
