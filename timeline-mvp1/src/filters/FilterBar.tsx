@@ -1434,8 +1434,9 @@ export function FilterBar() {
                       setFilters(updatedFilters);
                     }}
                     openValueMenuInitially={false}
-                    // Disable value menu for DOL filters
-                    disableValueMenu={isDOLFilter}
+                    // Disable value menu for ALL date filters (DOL and date/range)
+                    // For date/range: clicking value opens DatePicker instead
+                    disableValueMenu={true}
                     // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );
