@@ -1415,8 +1415,10 @@ export function FilterBar() {
                     values={dateValue ? [{ id: isDOLFilter ? 'dol-value' : 'date-value', label: dateValue }] : []}
                     value={dateValue ? [isDOLFilter ? 'dol-value' : 'date-value'] : []}
                     onValueChange={(newValue) => {
+                      console.log('Date pill value clicked:', { mode, isDOLFilter, dateData });
                       // Only allow changing value for specific date and date range
                       if (!isDOLFilter && (mode === 'specific' || mode === 'range')) {
+                        console.log('Opening DatePicker for mode:', mode);
                         // Open DatePicker to select new date
                         setDatePickerMode(mode as 'specific' | 'range');
                         if (mode === 'specific' && dateData.start) {
@@ -1429,6 +1431,8 @@ export function FilterBar() {
                           });
                         }
                         setShowDatePicker(true);
+                      } else {
+                        console.log('Not opening DatePicker - isDOLFilter:', isDOLFilter);
                       }
                     }}
                     onClear={() => {
@@ -1441,6 +1445,8 @@ export function FilterBar() {
                     // Disable value menu for ALL date filters (DOL and date/range)
                     // For date/range: clicking value opens DatePicker instead
                     disableValueMenu={true}
+                    // Date/range filters are clickable, DOL filters are not
+                    valueClickable={!isDOLFilter}
                     // Fixed filters should never call onDropdownClose - they're always present
                   />
                 );

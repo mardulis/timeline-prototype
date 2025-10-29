@@ -28,6 +28,7 @@ export interface FilterRulePillProps {
   style?: React.CSSProperties;
   openValueMenuInitially?: boolean; // New prop to control initial value menu state
   disableValueMenu?: boolean; // Disable value dropdown (makes value static/read-only)
+  valueClickable?: boolean; // Value is clickable even when dropdown is disabled (for DatePicker)
 }
 
 export default function FilterRulePill(props: FilterRulePillProps) {
@@ -47,7 +48,8 @@ export default function FilterRulePill(props: FilterRulePillProps) {
     className,
     style,
     openValueMenuInitially = false,
-    disableValueMenu = false
+    disableValueMenu = false,
+    valueClickable = false
   } = props;
 
   const { openDropdown, setOpenDropdown } = useDropdown();
@@ -340,7 +342,7 @@ export default function FilterRulePill(props: FilterRulePillProps) {
         }}
         aria-expanded={valOpen}
         aria-haspopup="menu"
-        style={{ cursor: disableValueMenu ? 'default' : 'pointer' }}
+        style={{ cursor: (disableValueMenu && !valueClickable) ? 'default' : 'pointer' }}
       >
         <span className={`${cls.valueText} ${!valueLabel ? cls.isEmpty : ''}`}>
           {valueLabel || "Select value"}
