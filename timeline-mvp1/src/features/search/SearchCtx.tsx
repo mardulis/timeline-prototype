@@ -167,11 +167,13 @@ function applyFilters(docs: Doc[], query: string, filters: SearchFilters, viewMo
           }
           return true;
         case 'before':
-          if (startDate) {
-            return docDate < startDate;
+          // "Before" uses endDate (e.g., before DOL)
+          if (endDate) {
+            return docDate < endDate;
           }
           return true;
         case 'after':
+          // "After" uses startDate (e.g., after DOL)
           if (startDate) {
             return docDate > startDate;
           }

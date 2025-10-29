@@ -381,6 +381,20 @@ export function FilterBar() {
   const [newlyCreatedPills, setNewlyCreatedPills] = useState<Set<string>>(new Set());
   const { setOpenDropdown } = useDropdown();
   
+  // Helper function to parse date string without timezone issues
+  const parseLocalDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
+  };
+
+  // Helper function to format date to YYYY-MM-DD (local date, no timezone conversion)
+  const formatDateToISO = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   // Custom clear filters handler
   const handleClearAllFilters = () => {
     // Clear query
@@ -1156,14 +1170,14 @@ export function FilterBar() {
           const dolDate = new Date(2020, 2, 27); // Will get from getDOLDate()
           setFilters(prevFilters => addToCreationOrder('date', { 
             ...prevFilters, 
-            date: { operator: 'before', end: dolDate.toISOString().split('T')[0], mode: 'before-dol' }
+            date: { operator: 'before', end: formatDateToISO(dolDate), mode: 'before-dol' }
           }));
         } else if (value === 'after-dol') {
           // Set to DOL date automatically
           const dolDate = new Date(2020, 2, 27); // Will get from getDOLDate()
           setFilters(prevFilters => addToCreationOrder('date', { 
             ...prevFilters, 
-            date: { operator: 'after', start: dolDate.toISOString().split('T')[0], mode: 'after-dol' }
+            date: { operator: 'after', start: formatDateToISO(dolDate), mode: 'after-dol' }
           }));
         }
       },
@@ -1371,10 +1385,10 @@ export function FilterBar() {
                 // Format the date value for display
                 let dateValue = '';
                 if (mode === 'specific' && dateData.start) {
-                  dateValue = new Date(dateData.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  dateValue = parseLocalDate(dateData.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 } else if (mode === 'range' && dateData.start && dateData.end) {
-                  const startStr = new Date(dateData.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                  const endStr = new Date(dateData.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const startStr = parseLocalDate(dateData.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const endStr = parseLocalDate(dateData.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                   dateValue = `${startStr} - ${endStr}`;
                 } else if (mode === 'before-dol') {
                   dateValue = 'DOL';
@@ -1406,9 +1420,9 @@ export function FilterBar() {
                         // Open DatePicker to select new date
                         setDatePickerMode(mode as 'specific' | 'range');
                         if (mode === 'specific' && dateData.start) {
-                          setTempDateRange({ start: new Date(dateData.start), end: null });
+                          setTempDateRange({ start: parseLocalDate(dateData.start), end: null });
                         } else if (mode === 'range' && dateData.start && dateData.end) {
-                          setTempDateRange({ start: new Date(dateData.start), end: null });
+                          setTempDateRange({ start: parseLocalDate(dateData.start), end: null });
                         }
                         setShowDatePicker(true);
                       }
@@ -1764,7 +1778,7 @@ export function FilterBar() {
             const existingDateFilter = filters.date;
             if (existingDateFilter) {
               if (existingDateFilter.start) {
-                pickerSelectedDate = new Date(existingDateFilter.start);
+                pickerSelectedDate = parseLocalDate(existingDateFilter.start);
               }
             }
             
@@ -1812,7 +1826,7 @@ export function FilterBar() {
                     // Single date selection - close immediately
                     setFilters(prevFilters => addToCreationOrder('date', {
                       ...prevFilters,
-                      date: { operator: 'is', start: date.toISOString().split('T')[0], mode: 'specific' }
+                      date: { operator: 'is', start: formatDateToISO(date), mode: 'specific' }
                     }));
                     setShowDatePicker(false);
                     setTempDateRange({ start: null, end: null });
@@ -1831,8 +1845,8 @@ export function FilterBar() {
                         ...prevFilters,
                         date: { 
                           operator: 'between', 
-                          start: startDate.toISOString().split('T')[0], 
-                          end: endDate.toISOString().split('T')[0], 
+                          start: formatDateToISO(startDate), 
+                          end: formatDateToISO(endDate), 
                           mode: 'range' 
                         }
                       }));
