@@ -1474,12 +1474,19 @@ export function FilterBar() {
                   }
                 }}
                 onClick={() => {
+                  console.log('[Dashed Button Click]', filter.key, { activeQuickFilter, hasValue, showDatePicker });
                   // Toggle dropdown menu for this filter
+                  // Make sure DatePicker is closed when opening QuickFilterMenu
+                  if (filter.key === 'date') {
+                    setShowDatePicker(false);
+                  }
+                  
                   if (activeQuickFilter === filter.key) {
                     setActiveQuickFilter(null);
                   } else {
                     setActiveQuickFilter(filter.key);
                   }
+                  console.log('[After Click] Set activeQuickFilter to:', filter.key);
                 }}
               >
                 <img src={filter.icon} alt={filter.label} width="16" height="16" />
@@ -1648,11 +1655,16 @@ export function FilterBar() {
           
           {/* Quick Filter Menus */}
           {activeQuickFilter && (() => {
+            console.log('[QuickFilterMenu Render]', { activeQuickFilter, menuVisible });
             // Check both pinned filters (quickFilters) and More filters (moreFilters)
             const pinnedFilter = quickFilters.find(f => f.key === activeQuickFilter);
             const moreFilterDef = !pinnedFilter ? moreFilters.find(f => f.key === activeQuickFilter) : undefined;
             const filter = (pinnedFilter || moreFilterDef) as any;
-            if (!filter) return null;
+            if (!filter) {
+              console.log('[QuickFilterMenu] No filter found for:', activeQuickFilter);
+              return null;
+            }
+            console.log('[QuickFilterMenu] Rendering for:', filter.key, { values: filter.values });
             
             // Determine if this is a multiselect filter
             // Pinned filters: title, author
@@ -1778,6 +1790,7 @@ export function FilterBar() {
           
           {/* DatePicker Component - shown outside dropdown */}
           {showDatePicker && dateFilterButtonRef.current && (() => {
+            console.log('[DatePicker Render]', { showDatePicker, datePickerMode, hasRef: !!dateFilterButtonRef.current });
             // Calculate the selected date to show in DatePicker
             let pickerSelectedDate = new Date();
             
