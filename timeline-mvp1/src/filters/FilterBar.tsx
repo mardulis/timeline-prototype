@@ -1756,49 +1756,102 @@ export function FilterBar() {
           })()}
           
           {/* DatePicker Component - shown outside dropdown */}
-          {showDatePicker && dateFilterButtonRef.current && (
-            <DatePicker
-              selectedDate={tempDateRange.start || new Date()}
-              docs={allDocs}
-              onDateSelect={(date: Date) => {
-                if (datePickerMode === 'specific') {
-                  // Single date selection
-                  setFilters(prevFilters => addToCreationOrder('date', {
-                    ...prevFilters,
-                    date: { operator: 'is', start: date.toISOString().split('T')[0], mode: 'specific' }
-                  }));
-                  setShowDatePicker(false);
-                } else if (datePickerMode === 'range') {
-                  // Range selection - set start or end
-                  if (!tempDateRange.start) {
-                    setTempDateRange({ start: date, end: null });
-                  } else if (!tempDateRange.end) {
-                    const start = tempDateRange.start;
-                    const end = date;
-                    // Ensure start is before end
-                    const [startDate, endDate] = start > end ? [end, start] : [start, end];
+          {showDatePicker && dateFilterButtonRef.current && (() => {
+            // Calculate the selected date to show in DatePicker
+            let pickerSelectedDate = new Date();
+            
+            // If we have an existing date filter, use that date
+            const existingDateFilter = filters.date;
+            if (existingDateFilter) {
+              if (existingDateFilter.start) {
+                pickerSelectedDate = new Date(existingDateFilter.start);
+              }
+            }
+            
+            // For range selection in progress, use the temp start date
+            if (datePickerMode === 'range' && tempDateRange.start) {
+              pickerSelectedDate = tempDateRange.start;
+            }
+            
+            // Get the date range from documents
+            const docDates = allDocs.map(doc => new Date(doc.date).getTime());
+            const minDocDate = new Date(Math.min(...docDates));
+            const maxDocDate = new Date(Math.max(...docDates));
+            
+            // Helper text for range selection
+            const rangeHelperText = datePickerMode === 'range' 
+              ? (tempDateRange.start 
+                  ? `Select end date (start: ${tempDateRange.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`
+                  : 'Select start date')
+              : '';
+            
+            return (
+              <>
+                {datePickerMode === 'range' && (
+                  <div style={{
+                    position: 'fixed',
+                    top: dateFilterButtonRef.current?.getBoundingClientRect().bottom || 0,
+                    left: dateFilterButtonRef.current?.getBoundingClientRect().left || 0,
+                    background: '#2582FF',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '8px 8px 0 0',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    zIndex: 50007,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    {rangeHelperText}
+                  </div>
+                )}
+                <DatePicker
+                  selectedDate={pickerSelectedDate}
+                  docs={allDocs}
+                  onDateSelect={(date: Date) => {
+                  if (datePickerMode === 'specific') {
+                    // Single date selection - close immediately
                     setFilters(prevFilters => addToCreationOrder('date', {
                       ...prevFilters,
-                      date: { 
-                        operator: 'between', 
-                        start: startDate.toISOString().split('T')[0], 
-                        end: endDate.toISOString().split('T')[0], 
-                        mode: 'range' 
-                      }
+                      date: { operator: 'is', start: date.toISOString().split('T')[0], mode: 'specific' }
                     }));
                     setShowDatePicker(false);
                     setTempDateRange({ start: null, end: null });
+                  } else if (datePickerMode === 'range') {
+                    // Range selection - set start or end
+                    if (!tempDateRange.start) {
+                      // First click: set start date
+                      setTempDateRange({ start: date, end: null });
+                    } else {
+                      // Second click: set end date and create filter
+                      const start = tempDateRange.start;
+                      const end = date;
+                      // Ensure start is before end
+                      const [startDate, endDate] = start > end ? [end, start] : [start, end];
+                      setFilters(prevFilters => addToCreationOrder('date', {
+                        ...prevFilters,
+                        date: { 
+                          operator: 'between', 
+                          start: startDate.toISOString().split('T')[0], 
+                          end: endDate.toISOString().split('T')[0], 
+                          mode: 'range' 
+                        }
+                      }));
+                      setShowDatePicker(false);
+                      setTempDateRange({ start: null, end: null });
+                    }
                   }
-                }
-              }}
-              onClose={() => {
-                setShowDatePicker(false);
-                setTempDateRange({ start: null, end: null });
-              }}
-              isVisible={showDatePicker}
-              triggerRef={dateFilterButtonRef}
-            />
-          )}
+                }}
+                onClose={() => {
+                  setShowDatePicker(false);
+                  setTempDateRange({ start: null, end: null });
+                }}
+                isVisible={showDatePicker}
+                triggerRef={dateFilterButtonRef}
+                highlightedDate={tempDateRange.start || null}
+              />
+              </>
+            );
+          })()}
         </FilterBarContainer>
       );
     }

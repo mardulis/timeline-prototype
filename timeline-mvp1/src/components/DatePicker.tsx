@@ -440,13 +440,25 @@ const DatePicker: React.FC<DatePickerProps> = ({
                            selectedDate.getMonth() === dayData.date.getMonth() &&
                            selectedDate.getDate() === dayData.date.getDate();
           
+          const isHighlighted = highlightedDate ? (
+                               highlightedDate.getFullYear() === dayData.date.getFullYear() &&
+                               highlightedDate.getMonth() === dayData.date.getMonth() &&
+                               highlightedDate.getDate() === dayData.date.getDate()
+                             ) : false;
+          
           return (
             <DateButton
               key={index}
-              isSelected={isSelected}
+              isSelected={isSelected || isHighlighted}
               isCurrentMonth={dayData.isCurrentMonth}
               hasDocuments={dayData.hasDocuments}
               onClick={() => handleDateClick(dayData.date)}
+              style={isHighlighted ? { 
+                background: '#2582FF', 
+                color: 'white',
+                fontWeight: 600,
+                border: '2px solid #1E3A8A'
+              } : undefined}
             >
               {dayData.date.getDate()}
             </DateButton>
