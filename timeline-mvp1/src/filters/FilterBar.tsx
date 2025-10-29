@@ -1422,7 +1422,11 @@ export function FilterBar() {
                         if (mode === 'specific' && dateData.start) {
                           setTempDateRange({ start: parseLocalDate(dateData.start), end: null });
                         } else if (mode === 'range' && dateData.start && dateData.end) {
-                          setTempDateRange({ start: parseLocalDate(dateData.start), end: null });
+                          // When editing range, show current range in picker, but allow reselection
+                          setTempDateRange({ 
+                            start: parseLocalDate(dateData.start), 
+                            end: parseLocalDate(dateData.end) 
+                          });
                         }
                         setShowDatePicker(true);
                       }
@@ -1822,6 +1826,9 @@ export function FilterBar() {
                 <DatePicker
                   selectedDate={pickerSelectedDate}
                   docs={allDocs}
+                  mode={datePickerMode === 'range' ? 'range' : 'single'}
+                  rangeStart={datePickerMode === 'range' ? tempDateRange.start : null}
+                  rangeEnd={datePickerMode === 'range' ? tempDateRange.end : null}
                   onDateSelect={(date: Date) => {
                   if (datePickerMode === 'specific') {
                     // Single date selection - close immediately
@@ -1833,13 +1840,20 @@ export function FilterBar() {
                     setTempDateRange({ start: null, end: null });
                   } else if (datePickerMode === 'range') {
                     // Range selection - set start or end
-                    if (!tempDateRange.start) {
-                      // First click: set start date
+                    if (!tempDateRange.start || (tempDateRange.start && tempDateRange.end)) {
+                      // First click OR restart selection: set start date
                       setTempDateRange({ start: date, end: null });
-                    } else {
+                    } else if (tempDateRange.start && !tempDateRange.end) {
                       // Second click: set end date and create filter
                       const start = tempDateRange.start;
                       const end = date;
+                      
+                      // If clicking same date as start, just restart
+                      if (start.getTime() === end.getTime()) {
+                        setTempDateRange({ start: date, end: null });
+                        return;
+                      }
+                      
                       // Ensure start is before end
                       const [startDate, endDate] = start > end ? [end, start] : [start, end];
                       setFilters(prevFilters => addToCreationOrder('date', {

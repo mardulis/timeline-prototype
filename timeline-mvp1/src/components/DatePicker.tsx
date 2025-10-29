@@ -117,23 +117,48 @@ const DateButton = styled.button<{
   isCurrentMonth: boolean; 
   hasDocuments: boolean;
   isToday?: boolean;
+  isRangeStart?: boolean;
+  isRangeEnd?: boolean;
+  isInRange?: boolean;
 }>`
-  background: transparent;
+  background: ${props => {
+    if (props.isRangeStart || props.isRangeEnd) return '#2582FF';
+    if (props.isInRange) return '#E0EFFF';
+    if (props.isSelected) return '#2582FF';
+    return 'transparent';
+  }};
   border: none;
-  border-radius: 6px;
+  border-radius: ${props => {
+    if (props.isRangeStart && props.isRangeEnd) return '6px';
+    if (props.isRangeStart) return '6px 0 0 6px';
+    if (props.isRangeEnd) return '0 6px 6px 0';
+    if (props.isInRange) return '0';
+    return '6px';
+  }};
   padding: 8px;
   font-size: 14px;
-  font-weight: ${props => props.hasDocuments ? '600' : '400'}; // Only font weight difference
+  font-weight: ${props => {
+    if (props.isRangeStart || props.isRangeEnd || props.isSelected) return '600';
+    if (props.hasDocuments) return '600';
+    return '400';
+  }};
   cursor: pointer;
   color: ${props => {
+    if (props.isRangeStart || props.isRangeEnd || props.isSelected) return 'white';
     if (!props.isCurrentMonth) return '#9ca3af';
-    if (props.hasDocuments) return '#1f2937'; // Primary color
-    return '#6b7280'; // Secondary color
+    if (props.isInRange) return '#2582FF';
+    if (props.hasDocuments) return '#1f2937';
+    return '#6b7280';
   }};
   transition: all 0.2s ease;
+  position: relative;
   
   &:hover {
-    background: #f3f4f6;
+    background: ${props => {
+      if (props.isRangeStart || props.isRangeEnd || props.isSelected) return '#1E6FD9';
+      if (props.isInRange) return '#C7E1FF';
+      return '#f3f4f6';
+    }};
   }
   
   &:disabled {
@@ -154,6 +179,9 @@ interface DatePickerProps {
   isVisible: boolean;
   triggerRef?: React.RefObject<HTMLElement | null>;
   highlightedDate?: Date | null;
+  mode?: 'single' | 'range'; // Date picker mode
+  rangeStart?: Date | null; // For range selection
+  rangeEnd?: Date | null; // For range selection
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({
@@ -163,7 +191,10 @@ const DatePicker: React.FC<DatePickerProps> = ({
   onClose,
   isVisible,
   triggerRef,
-  highlightedDate
+  highlightedDate,
+  mode = 'single',
+  rangeStart = null,
+  rangeEnd = null
 }) => {
   const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
   const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
@@ -446,19 +477,30 @@ const DatePicker: React.FC<DatePickerProps> = ({
                                highlightedDate.getDate() === dayData.date.getDate()
                              ) : false;
           
+          // Range selection logic
+          const isRangeStart = mode === 'range' && rangeStart && 
+                              rangeStart.getFullYear() === dayData.date.getFullYear() &&
+                              rangeStart.getMonth() === dayData.date.getMonth() &&
+                              rangeStart.getDate() === dayData.date.getDate();
+          
+          const isRangeEnd = mode === 'range' && rangeEnd && 
+                            rangeEnd.getFullYear() === dayData.date.getFullYear() &&
+                            rangeEnd.getMonth() === dayData.date.getMonth() &&
+                            rangeEnd.getDate() === dayData.date.getDate();
+          
+          const isInRange = mode === 'range' && rangeStart && rangeEnd && 
+                           dayData.date > rangeStart && dayData.date < rangeEnd;
+          
           return (
             <DateButton
               key={index}
-              isSelected={isSelected || isHighlighted}
+              isSelected={mode === 'single' ? (isSelected || isHighlighted) : false}
               isCurrentMonth={dayData.isCurrentMonth}
               hasDocuments={dayData.hasDocuments}
+              isRangeStart={isRangeStart || false}
+              isRangeEnd={isRangeEnd || false}
+              isInRange={isInRange || false}
               onClick={() => handleDateClick(dayData.date)}
-              style={isHighlighted ? { 
-                background: '#2582FF', 
-                color: 'white',
-                fontWeight: 600,
-                border: '2px solid #1E3A8A'
-              } : undefined}
             >
               {dayData.date.getDate()}
             </DateButton>
